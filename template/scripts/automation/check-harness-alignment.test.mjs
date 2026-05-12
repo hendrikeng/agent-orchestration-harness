@@ -23,6 +23,60 @@ test('harness:verify fails when a required package script drifts', async () => {
   assert.match(String(result.stderr), /verify:fast/);
 });
 
+test('harness:verify fails when a CI-invoked package script is missing', async () => {
+  const rootDir = await createTemplateRepo();
+  const packageJsonPath = path.join(rootDir, 'package.json');
+  const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
+  delete packageJson.scripts['pr:verify'];
+  await fs.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
+
+  const result = runNode(
+    path.join(rootDir, 'scripts', 'automation', 'check-harness-alignment.mjs'),
+    [],
+    rootDir
+  );
+
+  assert.equal(result.status, 1);
+  assert.match(String(result.stderr), /SCRIPT_MISMATCH/);
+  assert.match(String(result.stderr), /pr:verify/);
+});
+
+test('harness:verify fails when plan closeout verification is missing', async () => {
+  const rootDir = await createTemplateRepo();
+  const packageJsonPath = path.join(rootDir, 'package.json');
+  const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
+  delete packageJson.scripts['plans:verify:closeout'];
+  await fs.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
+
+  const result = runNode(
+    path.join(rootDir, 'scripts', 'automation', 'check-harness-alignment.mjs'),
+    [],
+    rootDir
+  );
+
+  assert.equal(result.status, 1);
+  assert.match(String(result.stderr), /SCRIPT_MISMATCH/);
+  assert.match(String(result.stderr), /plans:verify:closeout/);
+});
+
+test('harness:verify fails when release verification is missing', async () => {
+  const rootDir = await createTemplateRepo();
+  const packageJsonPath = path.join(rootDir, 'package.json');
+  const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
+  delete packageJson.scripts['release:verify'];
+  await fs.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
+
+  const result = runNode(
+    path.join(rootDir, 'scripts', 'automation', 'check-harness-alignment.mjs'),
+    [],
+    rootDir
+  );
+
+  assert.equal(result.status, 1);
+  assert.match(String(result.stderr), /SCRIPT_MISMATCH/);
+  assert.match(String(result.stderr), /release:verify/);
+});
+
 test('harness:verify fails when required quality guidance is missing', async () => {
   const rootDir = await createTemplateRepo();
   const qualityPath = path.join(rootDir, 'docs', 'QUALITY_SCORE.md');

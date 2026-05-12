@@ -31,6 +31,7 @@ Canonical entrypoints:
 - `docs/MANIFEST.md`
 - `docs/README.md`
 - `docs/PLANS.md`
+- `docs/agent-hardening/RUN_CONTROL.md`
 - `docs/governance/RULES.md`
 - `docs/generated/AGENT-RUNTIME-CONTEXT.md`
 - `docs/product-specs/CURRENT-STATE.md`
@@ -45,6 +46,7 @@ Canonical entrypoints:
 - `one_slice_one_plan`: One executable slice maps to one future or active plan file; split broader work into ordered slices with explicit dependencies.
 - `review_is_required`: Non-trivial implementation work needs review scrutiny for correctness, security, reliability, missing tests, docs, and evidence before it is treated as done.
 - `no_destructive_git_without_instruction`: Never run destructive git or file commands without explicit written instruction.
+- `provider_native_execution_optional`: Provider-native goals, subagents, handoffs, hooks, guardrails, traces, and background runs may be used, but the repository remains the durable control plane.
 - `agent_adapters_are_subordinate`: Agent-specific adapter files may exist only as thin entrypoints and must defer to canonical repo docs.
 - `quality_bar_is_binding`: Non-trivial changes must clear the quality bar for correctness, contracts, maintainability, reliability, security, user experience, and evidence.
 - `canonical_policy_owner`: General engineering rules live once in their canonical owner; supporting references, generated artifacts, and agent adapters must not fork policy.
@@ -68,6 +70,25 @@ Canonical entrypoints:
 - assumption: Ask or stop rather than silently choosing a risky path.
 - assumption: Do not claim production readiness from proxy signals unless the checks cover the changed behavior.
 
+## Run Control
+
+- goal: Treat user intent, acceptance criteria, constraints, validation path, blockers, and completion evidence as the goal contract.
+- goal: Use provider-native goal, task, background-run, session, trace, and plan primitives when they improve reliability.
+- goal: Keep repo-local plans and evidence authoritative for work spanning sessions, agents, branches, or pull requests.
+- goal: Stop and re-scope when one goal becomes multiple independent outcomes or requires new security approval.
+- delegate: Delegate bounded sidecar work only when it can run independently without blocking the immediate next local step.
+- delegate: Keep urgent critical-path work in the main run when the next action depends on the result.
+- delegate: Every delegated task must name output, allowed write scope, relevant files, validation expectation, and tool boundaries.
+- delegate: The main run remains responsible for integration, review, validation, and closeout.
+- adapter: Provider-specific adapter files are thin entrypoints subordinate to AGENTS.md and canonical docs.
+- adapter: Prefer deterministic checks, hooks, guardrails, typed tool schemas, and structured outputs over prompt-only reminders for repeatable constraints.
+- adapter: Treat provider memory, conversation state, encrypted reasoning items, background tasks, and compacted context as accelerators, not authority.
+- adapter: If provider behavior conflicts with repo policy, repo policy wins until a canonical doc change lands.
+- audit: Restate the objective as concrete deliverables or success criteria before claiming completion.
+- audit: Map every explicit requirement, named file, command, test, gate, and deliverable to real evidence.
+- audit: Inspect actual files, command output, generated artifacts, evidence paths, and worktree state for each checklist item.
+- audit: Mark uncertainty as incomplete and either verify more, narrow the claim, or create a follow-up future slice.
+
 ## Memory Posture
 
 - do: Treat the repo as the main operating system for agent work.
@@ -75,12 +96,14 @@ Canonical entrypoints:
 - do: Use the active or future plan as the current execution contract.
 - do: Keep future and active must-land items as explicit checkboxes with stable backticked IDs.
 - do: Prefer nearest live code examples before inventing new patterns.
+- do: Treat provider-native goals, sessions, background runs, compacted context, and encrypted reasoning items as transient execution aids unless their decisions are written back into repo-local artifacts.
 - improve first: Better active-plan quality and explicit must-land scopes.
 - improve first: Better PR summaries and evidence indexes.
 - improve first: Better generated context quality and canonical doc navigation.
 - improve first: Better validation coverage before widening workflow machinery.
 - improve first: Better canonical rule ownership before adding duplicate guidance.
 - not yet: Do not treat provider chats as durable working memory.
+- not yet: Do not use provider session state as the only record of goal progress, handoff decisions, validation evidence, or completion claims.
 - not yet: Do not create agent-specific policy forks to compensate for thin canonical docs.
 - escalate when: Canonical docs repeatedly fail to let a fresh agent resume safely.
 - escalate when: Important operational context is living only in chat or terminal scrollback.

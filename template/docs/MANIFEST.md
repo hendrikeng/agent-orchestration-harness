@@ -68,6 +68,7 @@ Use `docs/README.md` for navigation, usage, and authoring guidance.
 - `docs/agent-hardening/README.md`
 - `docs/agent-hardening/EVALS.md`
 - `docs/agent-hardening/OBSERVABILITY.md`
+- `docs/agent-hardening/RUN_CONTROL.md`
 - `docs/agent-hardening/TOOL_POLICY.md`
 - `docs/agent-hardening/MEMORY_CONTEXT.md`
 - `docs/architecture/README.md`

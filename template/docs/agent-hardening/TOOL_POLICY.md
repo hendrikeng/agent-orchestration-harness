@@ -12,6 +12,7 @@ Source of Truth: This document.
 - `high`: privileged, irreversible, destructive, externally visible, cross-boundary, production-affecting, or sensitive-data actions.
 - Unknown, ambiguous, newly added, or dynamically configured tools default to `high` until classified.
 - Risk is determined by actual capability and target environment, not by tool name.
+- Delegated agents, subagents, hooks, background tasks, and hosted tools inherit the risk tier of their actual capabilities and targets.
 
 ## Approval Requirements
 
@@ -20,6 +21,7 @@ Source of Truth: This document.
 - `high`: explicit approval required for every execution attempt.
 - Approval scope must name the action, target, expected side effect, and expiry.
 - Approval for one target does not imply approval for adjacent targets, environments, branches, accounts, or destructive variants.
+- Approval for a main agent does not automatically authorize delegated agents, subagents, hooks, or background tasks to perform medium/high-risk actions.
 - Denied, expired, or ambiguous approval means do not execute.
 
 ## Execution Safety Rules

@@ -35,11 +35,24 @@ test('verify-fast can scope plan metadata verification to one plan', async () =>
     path.join(rootDir, 'scripts', 'automation', 'verify-fast.mjs'),
     ['--dry-run'],
     rootDir,
-    { VERIFY_PLAN_ID: 'red-inbox' }
+    { CI: '', VERIFY_PLAN_ID: 'red-inbox' }
   );
 
   assert.equal(result.status, 0, String(result.stderr));
   assert.match(String(result.stdout), /repair-plan-references\.mjs/);
   assert.doesNotMatch(String(result.stdout), /repair-plan-references\.mjs --dry-run/);
   assert.match(String(result.stdout), /check-plan-metadata\.mjs --plan-id red-inbox/);
+});
+
+test('verify-fast checks plan reference repair without mutation in CI', async () => {
+  const rootDir = await createTemplateRepo();
+  const result = runNode(
+    path.join(rootDir, 'scripts', 'automation', 'verify-fast.mjs'),
+    ['--dry-run'],
+    rootDir,
+    { CI: '1' }
+  );
+
+  assert.equal(result.status, 0, String(result.stderr));
+  assert.match(String(result.stdout), /repair-plan-references\.mjs --dry-run/);
 });

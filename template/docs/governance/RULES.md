@@ -21,6 +21,7 @@ Source of Truth: This document.
 - Canonical docs must remain environment-agnostic: no personal machine paths, hostnames, credentials, or private runbooks.
 - `docs/governance/policy-manifest.json` is the machine-readable policy source for runtime context compilation.
 - `docs/governance/project-gates.json` is the machine-readable source for real project-specific lint, typecheck, test, build, migration, browser, release, and deploy gates.
+- `docs/agent-hardening/RUN_CONTROL.md` defines how provider-native goals, subagents, handoffs, hooks, guardrails, traces, and background runs plug into repo-local policy without becoming a mandatory orchestration layer.
 
 ## Planning and Scope
 
@@ -35,7 +36,8 @@ Source of Truth: This document.
 
 - Do not switch branches or worktrees unless the user explicitly requests it in-thread.
 - Prefer short-lived slice branches and PR review for shared-repository work.
-- Atomic commits provide slice isolation inside a checkout; they are not a substitute for branch policy when a repo defines one.
+- Atomic commits are allowed as slice-local checkpoints and review aids inside a checkout; they are not a substitute for branch policy when a repo defines one.
+- For shared repositories, use branch classes as the coordination surface: `slice/*`, `fix/*`, and `release/*`.
 - Repo-specific `dev`, `main`, release branch, or merge-strategy rules must be documented in repo-local ops docs before they are treated as mandatory.
 - Merge-ready slices should close or update their active plan state and preserve review evidence in completed plans or evidence docs.
 
@@ -51,6 +53,7 @@ Source of Truth: This document.
 
 - Translate implementation requests into verifiable goals before editing.
 - For multi-step work, pair each planned step with the check that proves it.
+- Use provider-native goal and loop features when useful, but keep the durable goal contract, handoff evidence, and completion audit in the repository.
 - Prefer the smallest implementation that satisfies the must-land checklist, and keep every changed line traceable to the user request, active plan, or required validation.
 - State material assumptions when intent has multiple plausible interpretations; ask or stop rather than silently choosing a risky path.
 

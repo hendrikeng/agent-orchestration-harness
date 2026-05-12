@@ -17,6 +17,9 @@ const requiredScripts = new Map([
   ['project:gates:full', 'node ./scripts/automation/check-project-gates.mjs --profile full --run'],
   ['harness:verify', 'node ./scripts/automation/check-harness-alignment.mjs'],
   ['plans:verify', 'node ./scripts/automation/check-plan-metadata.mjs'],
+  ['pr:verify', 'node ./scripts/automation/check-pr-contract.mjs'],
+  ['plans:verify:closeout', 'node ./scripts/automation/check-plan-closeout.mjs'],
+  ['release:verify', 'node ./scripts/automation/release-verify.mjs'],
   ['verify:fast', 'node ./scripts/automation/verify-fast.mjs'],
   ['verify:full', 'node ./scripts/automation/verify-full.mjs']
 ]);
@@ -24,11 +27,8 @@ const requiredScripts = new Map([
 const optionalBlueprintScripts = new Map([
   ['bootstrap:verify', 'bash ./scripts/bootstrap-verify.sh'],
   ['path-policy:verify', 'node ./scripts/automation/check-path-policy.mjs'],
-  ['pr:verify', 'node ./scripts/automation/check-pr-contract.mjs'],
   ['lint:changed', 'node ./scripts/automation/lint-changed.mjs'],
-  ['plans:verify:closeout', 'node ./scripts/automation/check-plan-closeout.mjs'],
   ['release:notes', 'node ./scripts/automation/release-notes.mjs'],
-  ['release:verify', 'node ./scripts/automation/release-verify.mjs'],
   ['verify:deploy', 'node ./scripts/automation/verify-deploy.mjs']
 ]);
 
@@ -53,6 +53,7 @@ const canonicalDocs = [
   'docs/ops/automation/LITE_QUICKSTART.md',
   'docs/governance/RULES.md',
   'docs/governance/policy-manifest.json',
+  'docs/agent-hardening/RUN_CONTROL.md',
   'docs/governance/project-gates.json'
 ];
 
@@ -65,6 +66,7 @@ const requiredDocSnippets = [
   ['docs/BACKEND.md', 'Backend Quality Bar'],
   ['docs/SECURITY.md', 'Security Review Checklist'],
   ['docs/RELIABILITY.md', 'Reliability Anti-Patterns'],
+  ['docs/agent-hardening/RUN_CONTROL.md', 'Provider-native execution machinery is optional'],
   ['docs/governance/RULES.md', 'Policy Surface Model'],
   ['docs/governance/project-gates.json', '"id": "lint"'],
   ['docs/ops/api/README.md', 'API Contract'],

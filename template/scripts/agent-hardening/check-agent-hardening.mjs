@@ -9,6 +9,7 @@ const requiredMarkdownFiles = [
   'docs/agent-hardening/README.md',
   'docs/agent-hardening/EVALS.md',
   'docs/agent-hardening/OBSERVABILITY.md',
+  'docs/agent-hardening/RUN_CONTROL.md',
   'docs/agent-hardening/TOOL_POLICY.md',
   'docs/agent-hardening/MEMORY_CONTEXT.md'
 ];
@@ -29,6 +30,12 @@ const requiredHeadings = {
     'Generated Artifact Contract'
   ],
   'docs/agent-hardening/OBSERVABILITY.md': ['Required Run Trace Fields', 'Error Classification', 'Retention and Redaction'],
+  'docs/agent-hardening/RUN_CONTROL.md': [
+    'Goal-Driven Run Control',
+    'Delegation and Handoffs',
+    'Provider Adapter Contract',
+    'Completion Audits'
+  ],
   'docs/agent-hardening/TOOL_POLICY.md': ['Risk Tiers', 'Approval Requirements', 'Execution Safety Rules'],
   'docs/agent-hardening/MEMORY_CONTEXT.md': [
     'Context Budget Rules',

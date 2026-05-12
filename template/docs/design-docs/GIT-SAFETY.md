@@ -30,7 +30,9 @@ Source of Truth: This document.
 
 ## Team Git Workflow
 
-- Treat atomic commits as slice isolation inside one checkout, not as a coordination mechanism for multiple developers on one shared branch.
+- Treat atomic commits as an optional slice-local checkpoint and review aid inside one checkout, not as a coordination mechanism for multiple developers on one shared branch.
+- Branch classes are the default shared workflow boundary: `slice/*` for planned work, `fix/*` for isolated low-risk fixes, and `release/*` for release preparation.
+- Solo repositories may use atomic commits more heavily, but shared repositories should still prefer short-lived branches so CI, PR templates, review policy, and release gates have a stable target.
 - Run one harness session per checkout. Do not have multiple developers or multiple harness runs commit directly to the same branch at the same time.
 - For a small independent change, branch from the stable baseline branch and merge back through normal review.
 - For a larger coordinated rollout, keep the stable baseline branch clean, create one temporary initiative branch, and branch each rollout slice from that initiative branch.

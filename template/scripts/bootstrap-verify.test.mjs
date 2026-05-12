@@ -24,5 +24,5 @@ test('bootstrap-verify resolves repo root when invoked from a nested directory',
 
   assert.notEqual(result.status, 0);
   assert.doesNotMatch(result.stderr, /No such file or directory/);
-  assert.match(result.stdout, /\[placeholder-check\]/);
+  assert.match(`${result.stdout}${result.stderr}`, /\[placeholder-check\]/);
 });

@@ -20,6 +20,7 @@
     "docs/agent-hardening/README.md",
     "docs/agent-hardening/EVALS.md",
     "docs/agent-hardening/OBSERVABILITY.md",
+    "docs/agent-hardening/RUN_CONTROL.md",
     "docs/agent-hardening/TOOL_POLICY.md",
     "docs/agent-hardening/MEMORY_CONTEXT.md",
     "docs/PLANS.md",
@@ -130,6 +131,7 @@
       "docs/governance/GOLDEN-PRINCIPLES.md",
       "docs/governance/RULES.md",
       "docs/agent-hardening/README.md",
+      "docs/agent-hardening/RUN_CONTROL.md",
       "docs/MANIFEST.md",
       "docs/product-specs/CURRENT-STATE.md",
       "docs/ops/automation/README.md"
@@ -140,6 +142,7 @@
       "docs/MANIFEST.md",
       "docs/PLANS.md",
       "docs/agent-hardening/README.md",
+      "docs/agent-hardening/RUN_CONTROL.md",
       "docs/product-specs/CURRENT-STATE.md",
       "docs/ops/automation/README.md"
     ],
@@ -159,6 +162,7 @@
       "docs/governance/README.md",
       "docs/governance/RULES.md",
       "docs/governance/policy-manifest.json",
+      "docs/agent-hardening/RUN_CONTROL.md",
       "docs/product-specs/README.md",
       "docs/product-specs/CURRENT-STATE.md",
       "docs/references/README.md",
@@ -228,6 +232,12 @@
       "Required Run Trace Fields",
       "Error Classification",
       "Retention and Redaction"
+    ],
+    "docs/agent-hardening/RUN_CONTROL.md": [
+      "Goal-Driven Run Control",
+      "Delegation and Handoffs",
+      "Provider Adapter Contract",
+      "Completion Audits"
     ],
     "docs/agent-hardening/TOOL_POLICY.md": [
       "Risk Tiers",
@@ -315,6 +325,15 @@
       ]
     },
     {
+      "path": "docs/agent-hardening/RUN_CONTROL.md",
+      "requiredFields": [
+        "Status",
+        "Owner",
+        "Last Updated",
+        "Source of Truth"
+      ]
+    },
+    {
       "path": "docs/agent-hardening/TOOL_POLICY.md",
       "requiredFields": [
         "Status",
@@ -369,6 +388,7 @@
       "docs/agent-hardening/README.md",
       "docs/agent-hardening/EVALS.md",
       "docs/agent-hardening/OBSERVABILITY.md",
+      "docs/agent-hardening/RUN_CONTROL.md",
       "docs/agent-hardening/TOOL_POLICY.md",
       "docs/agent-hardening/MEMORY_CONTEXT.md",
       "docs/PLANS.md",

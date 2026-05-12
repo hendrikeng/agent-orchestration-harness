@@ -13,6 +13,7 @@ Source of Truth: This document.
 - Security and boundary isolation by default.
 - Mechanical checks over manual interpretation.
 - Evidence over claims.
+- Provider-native execution over mandatory orchestration.
 - Canonical ownership over duplicate guidance.
 - Small complete slices over broad partial refactors.
 - Safe failure and recovery over silent fallback behavior.

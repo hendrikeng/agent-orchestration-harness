@@ -18,6 +18,7 @@ This file is the navigation and usage entrypoint for `docs/`. Use `docs/MANIFEST
 - Frontend standards: `docs/FRONTEND.md`
 - Backend standards: `docs/BACKEND.md`
 - Agent hardening policy: `docs/agent-hardening/README.md`
+- Agent run control: `docs/agent-hardening/RUN_CONTROL.md`
 - Governance policy: `docs/governance/README.md`
 - Governance rules: `docs/governance/RULES.md`
 - Golden principles: `docs/governance/GOLDEN-PRINCIPLES.md`
@@ -66,7 +67,7 @@ This file is the navigation and usage entrypoint for `docs/`. Use `docs/MANIFEST
 - `AGENTS.md`: map and constraints.
 - `README.md`: product summary and navigation entrypoint.
 - `ARCHITECTURE.md` + `docs/architecture/*`: architecture truth and dependency rules.
-- `docs/agent-hardening/*`: mandatory agent eval/observability/tool/memory policy.
+- `docs/agent-hardening/*`: mandatory agent run-control/eval/observability/tool/memory policy.
 - `docs/FRONTEND.md` and `docs/BACKEND.md`: implementation-side standards by runtime surface.
 - `docs/governance/project-gates.json`: project-specific compiler, lint, test, build, migration, browser, release, and deployment gates.
 

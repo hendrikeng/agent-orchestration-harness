@@ -25,6 +25,10 @@
     {
       "id": "observability-traceability",
       "status": "pass"
+    },
+    {
+      "id": "run-control-delegation",
+      "status": "pass"
     }
   ],
   "requireEvidencePaths": true,

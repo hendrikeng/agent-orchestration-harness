@@ -10,6 +10,7 @@ Source of Truth: This document.
 - Unique run identifier, task identifier, repository, branch, and commit or dirty-worktree state.
 - User request summary, active plan ID when applicable, and declared acceptance criteria.
 - Provider, model identifier, runtime version, prompt or policy version, and execution entrypoint.
+- Goal/run-control metadata: goal identifier when available, delegated task IDs, handoff boundaries, subagent roles, and provider-native background-run or session references.
 - Context selection metadata: canonical docs, plan files, current-state docs, code surfaces, tests, and evidence references loaded for the task.
 - Tool invocation events with tool name, risk tier, decision reason, normalized parameters, result status, duration, and redaction marker.
 - Approval events for gated actions, including requester, approver when available, approved scope, expiry, and denial reason when denied.
@@ -26,6 +27,7 @@ Source of Truth: This document.
 - Record boundary and authorization failures distinctly from generic runtime errors.
 - Capture the first failing step and the user-visible impact.
 - Separate model errors, tool errors, validation failures, policy denials, environment failures, user interruptions, and stale-context failures.
+- Separate delegation failures, missing handoff outputs, and provider-native goal-loop failures from generic workflow errors.
 - Mark partial success explicitly when code changed but validation, evidence, or closeout is incomplete.
 - Attach the smallest reproduction path: command, fixture, input, file path, trace ID, or incident bundle.
 - Promote repeated failure classes into eval fixtures or policy updates.

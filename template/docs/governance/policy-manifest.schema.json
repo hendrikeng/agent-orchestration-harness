@@ -9,6 +9,7 @@
     "executionModel",
     "validationPolicy",
     "executionQuality",
+    "runControl",
     "memoryPosture",
     "docContract",
     "gitSafetyContract"
@@ -139,6 +140,50 @@
           }
         },
         "assumptionDiscipline": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 8
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "runControl": {
+      "type": "object",
+      "required": [
+        "goalDrivenRunControl",
+        "delegationPolicy",
+        "providerAdapterPolicy",
+        "completionAudit"
+      ],
+      "properties": {
+        "goalDrivenRunControl": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "delegationPolicy": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "providerAdapterPolicy": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "completionAudit": {
           "type": "array",
           "minItems": 1,
           "items": {

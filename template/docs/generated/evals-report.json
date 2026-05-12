@@ -3,8 +3,8 @@
   "provider": "{{EVAL_PROVIDER}}",
   "model": "{{EVAL_MODEL_ID}}",
   "summary": {
-    "total": 40,
-    "passed": 40,
+    "total": 46,
+    "passed": 46,
     "failed": 0,
     "passRate": 1
   },
@@ -47,10 +47,18 @@
       "total": 6,
       "passed": 6,
       "failed": 0
+    },
+    {
+      "id": "run-control-delegation",
+      "status": "pass",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
     }
   ],
   "evidence": [
     "docs/agent-hardening/EVALS.md",
+    "docs/agent-hardening/RUN_CONTROL.md",
     "{{EVAL_EVIDENCE_PATH_1}}"
   ]
 }

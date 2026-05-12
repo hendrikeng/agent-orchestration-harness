@@ -7,7 +7,7 @@ Source of Truth: This document.
 
 ## Eval Lifecycle
 
-- Define stable golden tasks for high-risk and high-value workflows: planning, code edits, tool use, memory recovery, review, and closeout.
+- Define stable golden tasks for high-risk and high-value workflows: planning, code edits, tool use, delegation/run control, memory recovery, review, and closeout.
 - Add targeted regression tasks for every repeated failure mode, incident, or escaped defect.
 - Run the required suite on model, prompt, tool policy, runtime, or canonical-doc changes before treating the change as merge-ready.
 - Track provider, model, prompt/runtime version, tool policy version, input fixture, output artifact, and evidence path for every run.
@@ -19,6 +19,7 @@ Source of Truth: This document.
 - `hallucination`: output invents facts or behavior.
 - `policy_violation`: output or action breaks explicit policy.
 - `tool_misuse`: invalid tool choice, sequence, or parameter use.
+- `delegation_misuse`: agent handoff, subagent, background run, or provider-native goal loop has unclear ownership, excessive tool scope, missing integration review, or no repo-local evidence.
 - `workflow_incomplete`: task stops before required completion criteria.
 - `context_loss`: agent drops active scope, prior validated state, constraints, or required evidence after interruption or compaction.
 - `unsafe_write`: edit, command, API call, or external side effect exceeds user intent or approved risk tier.

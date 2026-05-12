@@ -56,12 +56,64 @@ function summarizeExecutionQuality(executionQuality) {
     .join('\n');
 }
 
-function buildContent(policy, today) {
+function summarizeRunControl(runControl) {
+  if (!runControl) {
+    return '';
+  }
+  return [
+    ['goal: ', runControl.goalDrivenRunControl],
+    ['delegate: ', runControl.delegationPolicy],
+    ['adapter: ', runControl.providerAdapterPolicy],
+    ['audit: ', runControl.completionAudit]
+  ]
+    .map(([prefix, items]) => summarizeList(items, prefix))
+    .filter(Boolean)
+    .join('\n');
+}
+
+function isTemplatePlaceholder(value) {
+  return /^\{\{[A-Z0-9_]+\}\}$/.test(String(value ?? '').trim());
+}
+
+function templatePlaceholder(name) {
+  return `{${`{${name}}`}}`;
+}
+
+function extractOwner(raw) {
+  const owner = String(raw ?? '').match(/^Owner:\s+(.+)$/m)?.[1]?.trim() ?? '';
+  return owner && !isTemplatePlaceholder(owner) ? owner : '';
+}
+
+async function readOwnerFromFile(filePath) {
+  try {
+    return extractOwner(await fs.readFile(filePath, 'utf8'));
+  } catch {
+    return '';
+  }
+}
+
+async function resolveDocOwner(rootDir, outputPath) {
+  const candidates = [
+    outputPath,
+    path.join(rootDir, 'AGENTS.md'),
+    path.join(rootDir, 'README.md'),
+    path.join(rootDir, 'docs', 'README.md')
+  ];
+  for (const candidate of candidates) {
+    const owner = await readOwnerFromFile(candidate);
+    if (owner) {
+      return owner;
+    }
+  }
+  return templatePlaceholder('DOC_OWNER');
+}
+
+function buildContent(policy, today, docOwner) {
   const entryPoints = policy?.docContract?.canonicalEntryPoints ?? [];
   return `# Agent Runtime Context
 
 Status: generated
-Owner: {{DOC_OWNER}}
+Owner: ${docOwner}
 Last Updated: ${today}
 Source of Truth: Derived from AGENTS.md and docs/governance/policy-manifest.json.
 
@@ -95,6 +147,10 @@ ${summarizeRules(policy?.mandatorySafetyRules)}
 
 ${summarizeExecutionQuality(policy?.executionQuality)}
 
+## Run Control
+
+${summarizeRunControl(policy?.runControl)}
+
 ## Memory Posture
 
 ${summarizeList(policy?.memoryPosture?.whatToDo, 'do: ')}
@@ -122,7 +178,8 @@ async function main() {
   const policy = resolveSafeRepoPath(rootDir, String(options.policy ?? DEFAULT_POLICY_PATH), 'Policy input path');
   const policyJson = await readJson(policy.abs);
   const today = new Date().toISOString().slice(0, 10);
-  const content = buildContent(policyJson, today);
+  const docOwner = await resolveDocOwner(rootDir, output.abs);
+  const content = buildContent(policyJson, today, docOwner);
   await fs.mkdir(path.dirname(output.abs), { recursive: true });
   await fs.writeFile(output.abs, content, 'utf8');
   console.log(`[context:compile] wrote ${output.rel}`);

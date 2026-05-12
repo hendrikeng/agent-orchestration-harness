@@ -8,6 +8,7 @@ Source of Truth: This document.
 ## Context Budget Rules
 
 - Treat the repo as the main operating system for agent work.
+- Treat provider-native goals, sessions, background runs, compacted context, and encrypted reasoning items as transient execution aids unless their decisions are written back into repo-local artifacts.
 - Keep plans, evidence, docs, code, review findings, and validation output as the source of truth.
 - Treat `## Must-Land Checklist` as the execution contract and keep `## Already-True Baseline`, `## Must-Land Checklist`, and `## Deferred Follow-Ons` separate.
 - Prioritize current task requirements, nearest live code, critical invariants, and recent authoritative state.
@@ -36,6 +37,7 @@ Persist distilled findings and stable references, not raw session history.
 - Do not persist secrets, credentials, or transient sensitive payloads.
 - Define expiration and deletion behavior for persisted memory when the project adds external memory systems.
 - Do not use external memory as the authority for policy, architecture, product state, security, or release readiness.
+- Do not use provider session state as the only record of goal progress, handoff decisions, validation evidence, or completion claims.
 - Convert durable decisions back into repo-local docs, plans, evidence indexes, tests, or generated runtime context.
 - Store conflict state explicitly when facts disagree: source, timestamp, owner, and current tie-break decision.
 - Keep reasoning state separate from evidence state:

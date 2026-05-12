@@ -13,6 +13,7 @@ If instructions conflict, this file is the behavioral priority entrypoint.
 - Docs-first minimal: this file is a concise map, not an execution playbook.
 - Humans define scope, constraints, owners, and acceptance criteria.
 - Agents execute scoped tasks using repo-local docs, code, and checks.
+- Provider-native goals, subagents, handoffs, hooks, guardrails, traces, and background runs are optional execution machinery, not harness requirements.
 - Non-trivial work is planned in `docs/future/` before implementation.
 - Promotion, execution, review, and closeout are repo-local.
 
@@ -58,6 +59,7 @@ Prefer established local patterns over new abstractions. If no strong example ex
 - Machine-readable policy: `docs/governance/policy-manifest.json`
 - Project gate contract: `docs/governance/project-gates.json`
 - Agent hardening: `docs/agent-hardening/README.md`
+- Agent run control: `docs/agent-hardening/RUN_CONTROL.md`
 - Quality scorecard: `docs/QUALITY_SCORE.md`
 - Engineering invariants: `docs/design-docs/ENGINEERING-INVARIANTS.md`
 - UI standards: `docs/design-docs/UI-STANDARDS.md`
@@ -125,7 +127,7 @@ Docs are part of done.
 - Never run destructive git/file commands without explicit written instruction.
 - Do not use `git stash` unless explicitly requested.
 - Do not switch branches or modify git worktrees unless explicitly requested.
-- Treat atomic commits as slice isolation, not as team coordination on shared branches.
+- Treat atomic commits as optional slice-local checkpoints, not as team coordination on shared branches.
 
 ## Test and Validation Expectations
 
