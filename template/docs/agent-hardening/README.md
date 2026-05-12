@@ -7,30 +7,30 @@ Source of Truth: This document and linked docs in this folder.
 
 ## Why This Exists
 
-- Agent quality and safety requirements must be explicit and shared.
-- Hardening policy is canonical from repository bootstrap.
+- Agent quality, safety, and recovery rules must be explicit enough for a fresh agent or reviewer to enforce.
+- Hardening policy is canonical from repository bootstrap and applies before project-specific agent adapters add local detail.
 - This folder defines stack-agnostic contracts for evals, observability, tool use, and memory/context behavior.
+- The harness must optimize for durable outcomes: correct code, auditable decisions, resumable work, and fast recovery after interruption.
+- Any agent workflow that cannot leave evidence, explain tool choices, or resume from repo-local context is not production-ready.
 
 ## Canonical Documents
 
 - `docs/agent-hardening/EVALS.md`
 - `docs/agent-hardening/evals.config.json`
-- `docs/agent-hardening/continuity-fixtures.json`
-- `docs/agent-hardening/resilience-fixtures.json`
 - `docs/agent-hardening/OBSERVABILITY.md`
 - `docs/agent-hardening/TOOL_POLICY.md`
 - `docs/agent-hardening/MEMORY_CONTEXT.md`
 - `docs/generated/evals-report.json`
-- `docs/generated/continuity-evals-report.json`
-- `docs/generated/resilience-evals-report.json`
 
 ## Enforcement
 
-- Targeted policy checks: `npm run agent:verify` and `npm run eval:verify`
-- Continuity fixture runner: `npm run eval:continuity`
-- Resilience matrix runner: `npm run eval:resilience`
-- Iteration profile: `npm run verify:fast`
-- Merge profile: `npm run verify:full`
+- Targeted policy checks: `npm run agent:verify` and `npm run eval:verify`.
+- Iteration profile: `npm run verify:fast`.
+- Merge profile: `npm run verify:full`.
+- Runtime context build: `npm run context:compile`.
 
-`agent:verify` and `eval:verify` are required and must pass before merge.
-`eval:verify` gates generated eval freshness and required suite health. Continuity evals measure whether the latest checkpoint and handoff are enough to resume accurately, and resilience evals measure whether the harness fails closed and records usable recovery state when execution goes wrong.
+- `agent:verify` and `eval:verify` are required before merge.
+- `eval:verify` gates generated eval freshness, required suite health, regression counts, and repository-local evidence.
+- `context:compile` must run whenever canonical docs, policy manifests, plan conventions, or hardening rules change.
+- High-risk changes must leave enough evidence for another agent to reproduce the decision path without relying on chat history.
+- Exceptions require an owner, reason, expiry, and follow-up tracked in the relevant plan or evidence index.

@@ -1,11 +1,8 @@
 {
+  "schemaVersion": 1,
   "reportPath": "docs/generated/evals-report.json",
-  "continuityReportPath": "docs/generated/continuity-evals-report.json",
-  "resilienceReportPath": "docs/generated/resilience-evals-report.json",
-  "maxAgeDays": 14,
-  "minimumPassRate": 0.95,
-  "continuityMinimumPassRate": 0.95,
-  "resilienceMinimumPassRate": 1,
+  "maxAgeDays": 7,
+  "minimumPassRate": 0.98,
   "maxCriticalRegressions": 0,
   "maxHighRegressions": 0,
   "requiredSuites": [
@@ -16,19 +13,26 @@
     {
       "id": "agent-safety-policy",
       "status": "pass"
-    }
-  ],
-  "requiredContinuitySuites": [
+    },
     {
-      "id": "continuity-fixture-resume",
+      "id": "memory-continuity",
+      "status": "pass"
+    },
+    {
+      "id": "tool-risk-boundaries",
+      "status": "pass"
+    },
+    {
+      "id": "observability-traceability",
       "status": "pass"
     }
   ],
-  "requiredResilienceSuites": [
-    {
-      "id": "resilience-critical-faults",
-      "status": "pass"
-    }
-  ],
-  "requireEvidencePaths": true
+  "requireEvidencePaths": true,
+  "acceptedFailureExpiryDays": 14,
+  "requiredEvidenceTypes": [
+    "runner-output",
+    "fixture",
+    "trace-or-log",
+    "review-note"
+  ]
 }
