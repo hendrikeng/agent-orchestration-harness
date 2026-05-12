@@ -81,11 +81,25 @@ function daysBetween(a, b) {
 }
 
 function qualityScoreLines(content) {
-  return content
-    .split(/\r?\n/)
-    .map((line) => line.match(/^-\s+([^:]+):\s+(.+)$/))
-    .filter(Boolean)
-    .map((match) => ({ label: match[1].trim(), value: match[2].trim() }));
+  const entries = [];
+  let inScoreSection = false;
+
+  for (const line of content.split(/\r?\n/)) {
+    const heading = line.match(/^##\s+(.+)$/);
+    if (heading) {
+      inScoreSection = heading[1].trim() === 'Domain Scores' || heading[1].trim() === 'Platform Scores';
+      continue;
+    }
+    if (!inScoreSection) {
+      continue;
+    }
+    const score = line.match(/^-\s+([^:]+):\s+(.+)$/);
+    if (score) {
+      entries.push({ label: score[1].trim(), value: score[2].trim() });
+    }
+  }
+
+  return entries;
 }
 
 function inspectQualityDoc(content, { templateMode, now }) {

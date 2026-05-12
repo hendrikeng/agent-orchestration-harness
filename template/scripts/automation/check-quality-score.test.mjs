@@ -192,6 +192,23 @@ test('quality score requires the fixed six score labels', async () => {
   assert.match(result.stderr, /Authorization and boundary enforcement/);
 });
 
+test('quality score ignores explanatory bullets outside score sections', async () => {
+  const rootDir = await createFixtureRoot({
+    quality: [
+      qualityDoc(),
+      '',
+      '## Current Gaps',
+      '',
+      '- Documentation governance enforcement: owned by Platform with follow-up checks pending.',
+      '- Authorization and boundary enforcement: review delegated admin routes before the next release.'
+    ].join('\n')
+  });
+  const result = spawnSync('node', [scriptPath], { cwd: rootDir, encoding: 'utf8' });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /score=100/);
+});
+
 test('quality score fails unclear ownership in adopted repos', async () => {
   const rootDir = await createFixtureRoot({
     quality: qualityDoc({ owner: '{{DOC_OWNER}}' }),
