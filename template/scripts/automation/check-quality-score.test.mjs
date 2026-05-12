@@ -190,6 +190,7 @@ test('quality score requires the fixed six score labels', async () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /MISSING_SCORE_RUBRIC/);
   assert.match(result.stderr, /Authorization and boundary enforcement/);
+  assert.match(result.stderr, /next: Add the missing required labels under Domain Scores or Platform Scores\./);
 });
 
 test('quality score ignores explanatory bullets outside score sections', async () => {

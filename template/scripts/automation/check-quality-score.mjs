@@ -23,6 +23,27 @@ const requiredQualityScoreLabels = [
   'Documentation governance enforcement',
   'Test coverage for critical flows'
 ];
+const findingHints = new Map([
+  ['MISSING_QUALITY_SCORE_DOC', 'Create docs/QUALITY_SCORE.md from the harness template and fill the owner, date, and six rubric rows.'],
+  ['UNCLEAR_QUALITY_OWNER', 'Set Owner to the accountable team or person; avoid placeholders such as owner, TBD, or {{DOC_OWNER}}.'],
+  ['MISSING_QUALITY_TIMESTAMP', 'Add Last Updated in YYYY-MM-DD format.'],
+  ['INVALID_QUALITY_TIMESTAMP', 'Use an ISO date such as 2026-05-12.'],
+  ['FUTURE_QUALITY_TIMESTAMP', 'Set Last Updated to today or the last real review date.'],
+  ['STALE_QUALITY_SCORE', 'Review the rubric, update scores only where evidence changed, and refresh Last Updated.'],
+  ['DUPLICATE_QUALITY_SCORE', 'Keep one score row for each required label inside Domain Scores or Platform Scores.'],
+  ['MISSING_SCORE_RUBRIC', 'Add the missing required labels under Domain Scores or Platform Scores.'],
+  ['INVALID_QUALITY_SCORE', 'Use an integer 1-5, or leave the template placeholder only before adoption.'],
+  ['LOW_QUALITY_SCORE', 'Keep the score if accurate, but bias toward smaller slices and stronger validation evidence.'],
+  ['MISSING_DOC_GOVERNANCE_CONFIG', 'Add docs/governance/doc-checks.config.json from the harness template.'],
+  ['UNCLEAR_DOC_OWNER', 'Set Owner metadata on the canonical doc to a concrete owner.'],
+  ['MISSING_PROJECT_GATES', 'Add docs/governance/project-gates.json and wire real project commands.'],
+  ['MISSING_BASELINE_GATE', 'Declare required fast lint, fast typecheck, fast unit-tests, and full build gates where applicable.'],
+  ['WEAK_BASELINE_GATE', 'Mark baseline gates required unless the surface is explicitly deferred with rationale.'],
+  ['MISSING_GATE_COMMAND', 'Set the gate command to the real project toolchain command.'],
+  ['PLACEHOLDER_GATE_COMMAND', 'Replace placeholder commands with real project commands before adoption is complete.'],
+  ['MISSING_UNIT_TEST_GATE', 'Add a required fast unit-tests gate, or document the missing test harness as deferred before relying on quality score.'],
+  ['DEFERRED_QUALITY_GATE', 'Keep the deferral truthful with owner, rationale, and activation path; wire the real command when the surface exists.']
+]);
 
 function finding(severity, code, message, file = null) {
   return { severity, code, message, file };
@@ -30,7 +51,9 @@ function finding(severity, code, message, file = null) {
 
 function formatFinding(entry) {
   const file = entry.file ? ` (${entry.file})` : '';
-  return `- [${entry.code}] ${entry.message}${file}`;
+  const hint = findingHints.get(entry.code);
+  const next = hint ? `\n  next: ${hint}` : '';
+  return `- [${entry.code}] ${entry.message}${file}${next}`;
 }
 
 async function exists(relPath) {

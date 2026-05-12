@@ -35,17 +35,25 @@ Use this as the simplest explanation of how the manual harness should operate da
 - Keep scope changes visible in the active plan; split follow-up work when it stops fitting the current slice.
 - Review medium and high risk changes before closeout.
 
+## Direct Fix Lane
+
+Use `fix/*` for narrow, low-risk corrections that are clearer in a PR than in a full plan.
+
+The lane is valid only when all of these are true:
+
+- one acceptance surface
+- no architecture, critical-invariant, security, data-model, release, deploy, or governance impact
+- focused validation proves the behavior
+- the PR or commit summary carries scope, risk, and evidence
+
+If any condition stops being true, create or promote a normal plan.
+
 ## Required Commands
 
-- `npm run context:compile`
-- `npm run docs:verify`
-- `npm run architecture:verify`
-- `npm run agent:verify`
-- `npm run eval:verify`
-- `npm run plans:verify`
-- `npm run project:gates:verify`
-- `npm run verify:fast`
-- `npm run verify:full`
+- Use focused commands for the touched behavior first.
+- Use `npm run verify:fast` during normal implementation and direct fixes that touch shared harness, docs, gates, or runtime context.
+- Use `npm run verify:full` before merge, release candidates, and medium or high risk changes.
+- Run narrower checks when their surfaces are directly touched or when a verifier asks for them.
 
 ## Non-Negotiables
 
