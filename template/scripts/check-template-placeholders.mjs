@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const rootDir = process.cwd();
 const PLACEHOLDER_PATTERN = /\{\{[A-Z0-9_]+\}\}/;
@@ -29,8 +30,26 @@ async function collectFiles(currentDir = rootDir) {
   return files.sort((left, right) => left.localeCompare(right));
 }
 
+function collectFilesFromGit() {
+  const result = spawnSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], {
+    cwd: rootDir,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore']
+  });
+  if (result.status !== 0) {
+    return null;
+  }
+
+  return String(result.stdout)
+    .split('\0')
+    .filter(Boolean)
+    .filter((relPath) => !EXCLUDED_FILES.has(path.basename(relPath)))
+    .map((relPath) => path.join(rootDir, relPath))
+    .sort((left, right) => left.localeCompare(right));
+}
+
 async function findPlaceholders() {
-  const files = await collectFiles();
+  const files = collectFilesFromGit() ?? await collectFiles();
   const hits = [];
   for (const filePath of files) {
     let raw;

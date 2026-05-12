@@ -30,6 +30,7 @@ Use `docs/README.md` for navigation, usage, and authoring guidance.
 - `docs/generated/`
 - `docs/generated/README.md`
 - `docs/generated/AGENT-RUNTIME-CONTEXT.md`
+- `docs/generated/db-schema.md`
 - `docs/governance/`
 - `docs/governance/policy-manifest.json`
 - `docs/governance/policy-manifest.schema.json`
@@ -91,6 +92,7 @@ Use `docs/README.md` for navigation, usage, and authoring guidance.
 - `docs/future/README.md`
 - `docs/generated/README.md`
 - `docs/generated/AGENT-RUNTIME-CONTEXT.md`
+- `docs/generated/db-schema.md`
 - `docs/governance/README.md`
 - `docs/governance/RULES.md`
 - `docs/governance/GOLDEN-PRINCIPLES.md`

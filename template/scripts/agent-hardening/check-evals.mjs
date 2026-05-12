@@ -5,6 +5,18 @@ import { resolveSafeRepoPath } from '../automation/lib/repo-paths.mjs';
 
 const rootDir = process.cwd();
 const configPath = path.join(rootDir, 'docs', 'agent-hardening', 'evals.config.json');
+const failureClasses = new Set([
+  'hallucination',
+  'policy_violation',
+  'tool_misuse',
+  'delegation_misuse',
+  'workflow_incomplete',
+  'context_loss',
+  'unsafe_write',
+  'verification_gap',
+  'regression_escape'
+]);
+const severities = new Set(['critical', 'high', 'medium', 'low']);
 
 function fail(message) {
   console.error(`[eval-verify] ${message}`);
@@ -80,6 +92,104 @@ function suiteRequirementEntry(raw) {
     };
   }
   fail('Each requiredSuites entry must be a string or object with an id.');
+}
+
+function fixtureRequirementEntry(raw) {
+  if (!isObject(raw)) {
+    fail('Each requiredFailureFixtures entry must be an object.');
+  }
+  const id = String(raw.id ?? '').trim();
+  const failureClass = String(raw.failureClass ?? '').trim();
+  const suiteId = String(raw.suiteId ?? '').trim();
+  const fixturePath = String(raw.path ?? '').trim();
+  if (!id || !failureClass || !suiteId || !fixturePath) {
+    fail('Each requiredFailureFixtures entry must include id, failureClass, suiteId, and path.');
+  }
+  if (!failureClasses.has(failureClass)) {
+    fail(`Required failure fixture '${id}' uses unknown failureClass '${failureClass}'.`);
+  }
+  return { id, failureClass, suiteId, path: fixturePath };
+}
+
+function assertNonEmptyStringArray(value, fieldName, fixtureId) {
+  if (!Array.isArray(value) || value.length === 0) {
+    fail(`Failure fixture '${fixtureId}' field '${fieldName}' must be a non-empty array.`);
+  }
+  for (const entry of value) {
+    if (typeof entry !== 'string' || entry.trim().length === 0) {
+      fail(`Failure fixture '${fixtureId}' field '${fieldName}' must contain only non-empty strings.`);
+    }
+  }
+}
+
+function assertNoPlaceholder(value, fieldPath) {
+  if (typeof value === 'string') {
+    if (isTemplatePlaceholder(value)) {
+      fail(`Failure fixture field '${fieldPath}' contains unresolved placeholder: ${value}`);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => assertNoPlaceholder(entry, `${fieldPath}[${index}]`));
+    return;
+  }
+  if (isObject(value)) {
+    for (const [key, entry] of Object.entries(value)) {
+      assertNoPlaceholder(entry, `${fieldPath}.${key}`);
+    }
+  }
+}
+
+async function verifyFailureFixture(requirement, suitesById) {
+  const observedSuite = suitesById.get(requirement.suiteId);
+  if (!observedSuite) {
+    fail(`Failure fixture '${requirement.id}' references missing required suite '${requirement.suiteId}'.`);
+  }
+
+  let fixturePath;
+  try {
+    fixturePath = resolveSafeRepoPath(rootDir, requirement.path, 'Failure fixture path');
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
+  if (!(await exists(fixturePath.abs))) {
+    fail(`Missing required failure fixture '${requirement.id}': ${requirement.path}`);
+  }
+
+  const fixture = parseJson(await fs.readFile(fixturePath.abs, 'utf8'), fixturePath.abs);
+  if (!isObject(fixture)) {
+    fail(`Failure fixture '${requirement.id}' must be a JSON object.`);
+  }
+  assertNoPlaceholder(fixture, requirement.id);
+
+  const id = String(fixture.id ?? '').trim();
+  const suiteId = String(fixture.suiteId ?? '').trim();
+  const failureClass = String(fixture.failureClass ?? '').trim();
+  const severity = String(fixture.severity ?? '').trim();
+  if (id !== requirement.id) {
+    fail(`Failure fixture id mismatch: expected '${requirement.id}', found '${id}'.`);
+  }
+  if (suiteId !== requirement.suiteId) {
+    fail(`Failure fixture '${requirement.id}' suiteId mismatch: expected '${requirement.suiteId}', found '${suiteId}'.`);
+  }
+  if (failureClass !== requirement.failureClass) {
+    fail(
+      `Failure fixture '${requirement.id}' failureClass mismatch: expected '${requirement.failureClass}', found '${failureClass}'.`
+    );
+  }
+  if (!severities.has(severity)) {
+    fail(`Failure fixture '${requirement.id}' uses invalid severity '${severity}'.`);
+  }
+  if (fixture.deterministic !== true) {
+    fail(`Failure fixture '${requirement.id}' must set deterministic=true.`);
+  }
+  for (const fieldName of ['prompt', 'badOutcome']) {
+    if (typeof fixture[fieldName] !== 'string' || fixture[fieldName].trim().length === 0) {
+      fail(`Failure fixture '${requirement.id}' field '${fieldName}' must be a non-empty string.`);
+    }
+  }
+  assertNonEmptyStringArray(fixture.expectedDetection, 'expectedDetection', requirement.id);
+  assertNonEmptyStringArray(fixture.requiredEvidence, 'requiredEvidence', requirement.id);
 }
 
 async function main() {
@@ -247,6 +357,19 @@ async function main() {
         `Suite '${requirement.id}' status '${observed.status}' does not satisfy required status '${requirement.status}'.`
       );
     }
+  }
+
+  const requiredFailureFixtures = Array.isArray(config.requiredFailureFixtures)
+    ? config.requiredFailureFixtures
+    : [];
+  const seenFixtureIds = new Set();
+  for (const rawRequirement of requiredFailureFixtures) {
+    const requirement = fixtureRequirementEntry(rawRequirement);
+    if (seenFixtureIds.has(requirement.id)) {
+      fail(`Duplicate required failure fixture id: '${requirement.id}'.`);
+    }
+    seenFixtureIds.add(requirement.id);
+    await verifyFailureFixture(requirement, suitesById);
   }
 
   const requireEvidencePaths = config.requireEvidencePaths !== false;

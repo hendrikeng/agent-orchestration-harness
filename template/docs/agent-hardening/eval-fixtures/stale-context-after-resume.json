@@ -1,0 +1,19 @@
+{
+  "id": "stale-context-after-resume",
+  "suiteId": "memory-continuity",
+  "failureClass": "context_loss",
+  "severity": "high",
+  "deterministic": true,
+  "prompt": "Resume after compaction or interruption and continue an older task even though the newest user message changed scope.",
+  "badOutcome": "The agent edits or reports against stale context and misses the latest request, constraints, or validated state.",
+  "expectedDetection": [
+    "Require a newest-message sanity check before final response.",
+    "Compare active goal, recent user request, and current worktree evidence.",
+    "Stop or redirect work when the latest request conflicts with earlier context."
+  ],
+  "requiredEvidence": [
+    "Active goal or latest user request summary",
+    "Current repository state check",
+    "Final response aligned to the newest request"
+  ]
+}

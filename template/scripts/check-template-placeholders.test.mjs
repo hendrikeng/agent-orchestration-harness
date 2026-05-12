@@ -35,6 +35,22 @@ test('placeholder checker ignores documented placeholder inventory and dependenc
   assert.match(result.stdout, /\[placeholder-check\] passed/);
 });
 
+test('placeholder checker respects gitignore for generated and local files', async () => {
+  const rootDir = await createFixtureRoot();
+  await fs.mkdir(path.join(rootDir, 'dist'), { recursive: true });
+  await fs.writeFile(path.join(rootDir, '.gitignore'), 'dist/\n.env\n', 'utf8');
+  await fs.writeFile(path.join(rootDir, 'dist', 'bundle.js'), 'const token = "{{IGNORED_DIST}}";\n', 'utf8');
+  await fs.writeFile(path.join(rootDir, '.env'), 'SECRET={{IGNORED_ENV}}\n', 'utf8');
+  await fs.writeFile(path.join(rootDir, 'README.md'), 'No placeholders here.\n', 'utf8');
+  const gitInit = spawnSync('git', ['init'], { cwd: rootDir, encoding: 'utf8' });
+  assert.equal(gitInit.status, 0, gitInit.stderr);
+
+  const result = runPlaceholderCheck(rootDir);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /\[placeholder-check\] passed/);
+});
+
 test('placeholder checker reports unresolved template tokens with file and line', async () => {
   const rootDir = await createFixtureRoot();
   await fs.mkdir(path.join(rootDir, 'docs'), { recursive: true });

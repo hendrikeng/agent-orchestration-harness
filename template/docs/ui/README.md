@@ -10,7 +10,7 @@ Source of Truth: This document.
 - `docs/ui/` captures canonical user-visible interaction contracts.
 - Keep this folder for UI behavior that is more specific than product specs and more stable than implementation notes.
 - Do not duplicate visual system rules from `docs/design-docs/UI-STANDARDS.md` or runtime implementation details from `docs/FRONTEND.md`.
-- Use this folder when user-visible behavior must survive component refactors, route moves, or provider-specific agent edits.
+- Use this folder when user-visible behavior must survive component refactors, route moves, or runtime-specific agent edits.
 
 ## Current Inventory
 

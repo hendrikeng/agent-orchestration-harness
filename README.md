@@ -21,7 +21,7 @@ Reusable blueprint for bootstrapping high-quality agent-assisted software projec
 - Non-trivial work is planned as one executable slice before implementation.
 - Code quality is protected through small scope, explicit contracts, focused validation, reviewable evidence, and automated checks.
 - The blueprint is agent-portable: any capable coding agent should be able to rebuild context from repo-local artifacts.
-- The blueprint deliberately avoids a mandatory orchestration runtime; provider-native goals, subagents, hooks, guardrails, traces, and background work should plug into repo-local plans and evidence instead of replacing them.
+- The blueprint deliberately avoids a mandatory orchestration runtime; runtime-native goals, subagents, hooks, guardrails, traces, and background work should plug into repo-local plans and evidence instead of replacing them.
 - External issue trackers, hosting providers, and deployment platforms are optional integrations, not harness requirements.
 
 ## Start Here
@@ -78,7 +78,7 @@ Approved. Bootstrap and execute the blueprint workflow now.
 7. Update current-state docs, architecture/standards docs, validation evidence, and completed-plan closeout where the change requires it.
 8. Run the strongest relevant verification available and report the exact commands and evidence.
 
-Keep the work agent-portable: Codex, Claude, or another capable coding agent must be able to resume from repository-local docs, plans, code, validation output, and evidence.
+Keep the work agent-portable: any capable coding agent must be able to resume from repository-local docs, plans, code, validation output, and evidence.
 ```
 
 Quality goal prompt:

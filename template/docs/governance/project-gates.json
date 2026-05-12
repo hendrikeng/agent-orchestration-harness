@@ -48,7 +48,7 @@
       "profile": "full",
       "status": "not-applicable",
       "command": "",
-      "rationale": "No database migration surface has been adopted yet."
+      "rationale": "No database migration surface has been adopted yet; docs/generated/db-schema.md records the placeholder schema state."
     },
     {
       "id": "browser-smoke",

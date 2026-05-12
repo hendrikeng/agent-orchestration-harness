@@ -1,7 +1,6 @@
 import { execFileSync } from "node:child_process";
 import process from "node:process";
 
-const ADAPTER_PREFIXES = [".claude/", ".roo/"];
 const HIGH_REVIEW_PREFIXES = [
   ".github/",
   "docs/governance/",
@@ -131,18 +130,9 @@ if (changedEntries.length === 0) {
   process.exit(0);
 }
 
-const findings = [];
 const warnings = [];
 
 for (const entry of changedEntries) {
-  for (const changedPath of entry.paths) {
-    if (hasPrefix(changedPath, ADAPTER_PREFIXES)) {
-      findings.push(
-        `agent-specific overlay change requires explicit review: ${changedPath} (${entry.statusField})`,
-      );
-    }
-  }
-
   if (hasPrefix(entry.currentPath, HIGH_REVIEW_PREFIXES)) {
     warnings.push(
       `high-review path changed; confirm plan, evidence, and approval coverage: ${entry.currentPath} (${entry.statusField})`,
@@ -157,16 +147,6 @@ if (warnings.length > 0) {
   for (const warning of warnings) {
     console.warn(`- ${warning}`);
   }
-}
-
-if (findings.length > 0) {
-  console.error(
-    `path-policy:verify failed with ${findings.length} issue(s) against ${baseRef}:`,
-  );
-  for (const finding of findings) {
-    console.error(`- ${finding}`);
-  }
-  process.exit(1);
 }
 
 console.log(

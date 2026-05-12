@@ -63,7 +63,7 @@ function summarizeRunControl(runControl) {
   return [
     ['goal: ', runControl.goalDrivenRunControl],
     ['delegate: ', runControl.delegationPolicy],
-    ['adapter: ', runControl.providerAdapterPolicy],
+    ['runtime: ', runControl.runtimeExecutionPolicy],
     ['audit: ', runControl.completionAudit]
   ]
     .map(([prefix, items]) => summarizeList(items, prefix))
@@ -94,10 +94,10 @@ async function readOwnerFromFile(filePath) {
 
 async function resolveDocOwner(rootDir, outputPath) {
   const candidates = [
-    outputPath,
     path.join(rootDir, 'AGENTS.md'),
     path.join(rootDir, 'README.md'),
-    path.join(rootDir, 'docs', 'README.md')
+    path.join(rootDir, 'docs', 'README.md'),
+    outputPath
   ];
   for (const candidate of candidates) {
     const owner = await readOwnerFromFile(candidate);

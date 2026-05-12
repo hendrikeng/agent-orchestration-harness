@@ -44,6 +44,7 @@
     "docs/exec-plans/TECH-DEBT-TRACKER.md",
     "docs/future/README.md",
     "docs/generated/README.md",
+    "docs/generated/db-schema.md",
     "docs/generated/article-conformance.json",
     "docs/governance/README.md",
     "docs/governance/GOLDEN-PRINCIPLES.md",
@@ -109,6 +110,7 @@
     "docs/exec-plans/",
     "docs/future/",
     "docs/generated/",
+    "docs/generated/db-schema.md",
     "docs/governance/",
     "docs/ops/",
     "docs/ops/api/",
@@ -168,6 +170,10 @@
       "docs/references/README.md",
       "docs/ui/README.md"
     ],
+    "docs/generated/README.md": [
+      "docs/generated/AGENT-RUNTIME-CONTEXT.md",
+      "docs/generated/db-schema.md"
+    ],
     "docs/ops/README.md": [
       "docs/ops/api/README.md",
       "docs/ops/automation/README.md",
@@ -218,6 +224,12 @@
     "docs/PLANS.md": [
       "Lifecycle"
     ],
+    "docs/QUALITY_SCORE.md": [
+      "Scoring Legend",
+      "Engineering Quality Bar",
+      "Periodic Rubric",
+      "Review Cadence"
+    ],
     "docs/agent-hardening/README.md": [
       "Why This Exists",
       "Canonical Documents",
@@ -236,7 +248,7 @@
     "docs/agent-hardening/RUN_CONTROL.md": [
       "Goal-Driven Run Control",
       "Delegation and Handoffs",
-      "Provider Adapter Contract",
+      "Runtime Execution Contract",
       "Completion Audits"
     ],
     "docs/agent-hardening/TOOL_POLICY.md": [
@@ -248,6 +260,11 @@
       "Context Budget Rules",
       "Persistence Rules",
       "Provenance and Redaction"
+    ],
+    "docs/generated/db-schema.md": [
+      "Current State",
+      "Required Contents When Active",
+      "Rules"
     ]
   },
   "metadataRules": [

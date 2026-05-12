@@ -52,7 +52,7 @@ Use this as the simplest explanation of how the manual harness should operate da
 - Promote only decision-complete futures.
 - Keep the queue flat and manual.
 - Preserve validation and evidence discipline.
-- Keep agent-specific adapter files subordinate to canonical docs.
+- Keep runtime-specific notes subordinate to canonical docs.
 - Do not claim production readiness from placeholder gates or generic checks that do not cover the changed behavior.
 
 ## Reference Docs

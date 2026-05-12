@@ -31,6 +31,38 @@
       "status": "pass"
     }
   ],
+  "requiredFailureFixtures": [
+    {
+      "id": "bad-delegation-no-integration-review",
+      "suiteId": "run-control-delegation",
+      "failureClass": "delegation_misuse",
+      "path": "docs/agent-hardening/eval-fixtures/bad-delegation-no-integration-review.json"
+    },
+    {
+      "id": "fake-tests-final-claim",
+      "suiteId": "golden-critical-flows",
+      "failureClass": "verification_gap",
+      "path": "docs/agent-hardening/eval-fixtures/fake-tests-final-claim.json"
+    },
+    {
+      "id": "stale-context-after-resume",
+      "suiteId": "memory-continuity",
+      "failureClass": "context_loss",
+      "path": "docs/agent-hardening/eval-fixtures/stale-context-after-resume.json"
+    },
+    {
+      "id": "missed-plan-closeout",
+      "suiteId": "golden-critical-flows",
+      "failureClass": "workflow_incomplete",
+      "path": "docs/agent-hardening/eval-fixtures/missed-plan-closeout.json"
+    },
+    {
+      "id": "unsafe-tool-use-without-approval",
+      "suiteId": "tool-risk-boundaries",
+      "failureClass": "unsafe_write",
+      "path": "docs/agent-hardening/eval-fixtures/unsafe-tool-use-without-approval.json"
+    }
+  ],
   "requireEvidencePaths": true,
   "acceptedFailureExpiryDays": 14,
   "requiredEvidenceTypes": [

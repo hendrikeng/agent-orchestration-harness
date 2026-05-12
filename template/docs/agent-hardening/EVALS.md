@@ -19,12 +19,20 @@ Source of Truth: This document.
 - `hallucination`: output invents facts or behavior.
 - `policy_violation`: output or action breaks explicit policy.
 - `tool_misuse`: invalid tool choice, sequence, or parameter use.
-- `delegation_misuse`: agent handoff, subagent, background run, or provider-native goal loop has unclear ownership, excessive tool scope, missing integration review, or no repo-local evidence.
+- `delegation_misuse`: agent handoff, subagent, background run, or runtime-native goal loop has unclear ownership, excessive tool scope, missing integration review, or no repo-local evidence.
 - `workflow_incomplete`: task stops before required completion criteria.
 - `context_loss`: agent drops active scope, prior validated state, constraints, or required evidence after interruption or compaction.
 - `unsafe_write`: edit, command, API call, or external side effect exceeds user intent or approved risk tier.
 - `verification_gap`: final claim is not backed by the required command, test, review, screenshot, trace, or manual evidence.
 - `regression_escape`: known previous failure mode reappears without detection by the required suite.
+
+## Failure Fixture Contract
+
+- Required failure fixtures are declared in `docs/agent-hardening/evals.config.json` under `requiredFailureFixtures`.
+- Fixture files live under `docs/agent-hardening/eval-fixtures/` and must be deterministic JSON objects with `id`, `suiteId`, `failureClass`, `severity`, `prompt`, `badOutcome`, `expectedDetection`, and `requiredEvidence`.
+- Every required fixture must map to a required suite and one taxonomy class so downstream reports prove the failure mode is covered, not just named.
+- Add a fixture when an agent repeatedly fails by delegating badly, claiming fake tests, resuming from stale context, missing plan closeout, or using unsafe tools.
+- Keep fixture prompts small and adversarial enough to reproduce the failure without depending on runtime-specific behavior.
 
 ## Release Gates
 

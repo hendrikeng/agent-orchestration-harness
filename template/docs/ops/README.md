@@ -22,7 +22,7 @@ Define operational entrypoints for API behavior, engineering workflow, release o
 
 - Link incident runbooks, dashboards, release notes, and escalation paths from this ops tree when the adopted project has them.
 - Keep runbooks current with architecture, deployment, environment, security, and reliability changes.
-- Keep provider-specific instructions subordinate to canonical repo scripts and docs.
+- Keep runtime-specific instructions subordinate to canonical repo scripts and docs.
 - Do not store secrets, credentials, private hostnames, or private runbook contents in public template docs.
 - Operational claims require evidence: command output, health check, trace, screenshot, PR check, incident record, or release evidence.
 

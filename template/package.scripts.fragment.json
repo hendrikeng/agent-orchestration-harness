@@ -9,6 +9,7 @@
     "path-policy:verify": "node ./scripts/automation/check-path-policy.mjs",
     "pr:verify": "node ./scripts/automation/check-pr-contract.mjs",
     "eval:verify": "node ./scripts/agent-hardening/check-evals.mjs",
+    "quality:score": "node ./scripts/automation/check-quality-score.mjs",
     "project:gates:verify": "node ./scripts/automation/check-project-gates.mjs",
     "project:gates:fast": "node ./scripts/automation/check-project-gates.mjs --profile fast --run",
     "project:gates:full": "node ./scripts/automation/check-project-gates.mjs --profile full --run",

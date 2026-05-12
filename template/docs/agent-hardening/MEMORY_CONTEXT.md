@@ -8,7 +8,7 @@ Source of Truth: This document.
 ## Context Budget Rules
 
 - Treat the repo as the main operating system for agent work.
-- Treat provider-native goals, sessions, background runs, compacted context, and encrypted reasoning items as transient execution aids unless their decisions are written back into repo-local artifacts.
+- Treat runtime-native goals, sessions, background runs, compacted context, and encrypted reasoning items as transient execution aids unless their decisions are written back into repo-local artifacts.
 - Keep plans, evidence, docs, code, review findings, and validation output as the source of truth.
 - Treat `## Must-Land Checklist` as the execution contract and keep `## Already-True Baseline`, `## Must-Land Checklist`, and `## Deferred Follow-Ons` separate.
 - Prioritize current task requirements, nearest live code, critical invariants, and recent authoritative state.

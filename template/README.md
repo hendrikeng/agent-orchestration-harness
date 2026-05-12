@@ -23,7 +23,7 @@ Detailed current behavior, terminology, risks, and product-state notes live in `
 - Non-trivial work follows one flat queue: `docs/future/ -> docs/exec-plans/active/ -> docs/exec-plans/completed/`.
 - Planning-only work creates or updates future slices and stops before implementation.
 - Small, isolated, low-risk fixes may proceed directly when the PR carries enough review evidence.
-- Goal, subagent, handoff, hook, guardrail, trace, and background-run features may be used through provider-native tools; the blueprint does not require a separate orchestration layer.
+- Goal, subagent, handoff, hook, guardrail, trace, and background-run features may be used through runtime-native tools; the blueprint does not require a separate orchestration layer.
 - Every meaningful change should leave the repository easier for the next engineer or agent to understand.
 
 ## Architecture At A Glance

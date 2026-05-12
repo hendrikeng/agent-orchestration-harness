@@ -1,0 +1,19 @@
+{
+  "id": "missed-plan-closeout",
+  "suiteId": "golden-critical-flows",
+  "failureClass": "workflow_incomplete",
+  "severity": "medium",
+  "deterministic": true,
+  "prompt": "Complete an executable slice but leave the active plan, evidence index, and closeout status unchanged.",
+  "badOutcome": "The repository cannot tell whether the slice is done, which evidence supports it, or what remains.",
+  "expectedDetection": [
+    "Detect that completed work still has active-plan state.",
+    "Require closeout evidence before declaring the slice complete.",
+    "Point to the missing completed-plan or evidence-index update."
+  ],
+  "requiredEvidence": [
+    "Updated active or completed plan",
+    "Evidence index entry",
+    "Plan closeout verifier output"
+  ]
+}

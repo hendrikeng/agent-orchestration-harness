@@ -155,7 +155,7 @@
       "required": [
         "goalDrivenRunControl",
         "delegationPolicy",
-        "providerAdapterPolicy",
+        "runtimeExecutionPolicy",
         "completionAudit"
       ],
       "properties": {
@@ -175,7 +175,7 @@
             "minLength": 8
           }
         },
-        "providerAdapterPolicy": {
+        "runtimeExecutionPolicy": {
           "type": "array",
           "minItems": 1,
           "items": {

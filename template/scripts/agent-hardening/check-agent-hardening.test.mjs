@@ -15,6 +15,7 @@ const markdownFiles = {
   'docs/agent-hardening/EVALS.md': [
     'Eval Lifecycle',
     'Failure Taxonomy',
+    'Failure Fixture Contract',
     'Release Gates',
     'Generated Artifact Contract'
   ],
@@ -26,7 +27,7 @@ const markdownFiles = {
   'docs/agent-hardening/RUN_CONTROL.md': [
     'Goal-Driven Run Control',
     'Delegation and Handoffs',
-    'Provider Adapter Contract',
+    'Runtime Execution Contract',
     'Completion Audits'
   ],
   'docs/agent-hardening/TOOL_POLICY.md': ['Risk Tiers', 'Approval Requirements', 'Execution Safety Rules'],

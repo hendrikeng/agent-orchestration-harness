@@ -87,6 +87,7 @@ function buildCommandSet(changedFiles) {
     resolvedPlanMetadataCommand(),
     'node ./scripts/automation/check-plan-closeout.mjs',
     'node ./scripts/automation/check-harness-alignment.mjs',
+    'node ./scripts/automation/check-quality-score.mjs',
     'node ./scripts/automation/check-project-gates.mjs --profile fast --run'
   ];
 

@@ -13,7 +13,7 @@ Source of Truth: This document.
 - Keep release policy in `docs/ops/releases/README.md`.
 - Keep project-specific deploy gates in `docs/governance/project-gates.json`.
 
-Deployment docs describe how shipped code reaches users. They must not contain secrets, private credentials, raw tokens, or provider-specific values that belong in protected environment systems.
+Deployment docs describe how shipped code reaches users. They must not contain secrets, private credentials, raw tokens, or environment-specific values that belong in protected environment systems.
 
 ## Required Model
 

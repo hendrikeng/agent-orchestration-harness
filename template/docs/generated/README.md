@@ -11,11 +11,12 @@ Generated artifacts are rebuildable outputs derived from canonical docs, policy 
 
 - `docs/generated/AGENT-RUNTIME-CONTEXT.md`: compact policy snapshot compiled from governance rules for agent sessions.
 - `docs/generated/article-conformance.json`: conformance summary derived from the repo's article/check rules.
+- `docs/generated/db-schema.md`: database schema snapshot generated from the adopted project's canonical schema and migrations when a database exists.
 - `docs/generated/evals-report.json`: agent-hardening evaluation summary.
 
 ## Optional Repo-Local Generated Artifacts
 
-- Schema reference snapshots or provider/export reports when the repository adds extra generation commands beyond the harness baseline.
+- External export reports when the repository adds extra generation commands beyond the harness baseline.
 
 ## Rules
 

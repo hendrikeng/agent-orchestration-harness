@@ -46,6 +46,18 @@ Scores below 4 mean agents should bias toward smaller slices, stronger evidence,
 - Keep score explanations short and actionable: name the gap, owner surface, and next validation step.
 - Do not inflate scores when enforcement is still manual, intermittent, or limited to one route.
 
+## Periodic Rubric
+
+Run `npm run quality:score` during regular maintenance, before release candidates, and after major agent-hardening or gate changes.
+
+The rubric flags:
+
+- stale canonical docs from `docs/governance/doc-checks.config.json`
+- weak or missing baseline gates from `docs/governance/project-gates.json`
+- missing required unit-test coverage gates
+- unclear canonical doc ownership
+- invalid or low domain/platform quality scores
+
 ## Review Cadence
 
 - Revisit quality scores after major architecture changes, critical incident fixes, release-gate changes, or new agent-hardening eval results.

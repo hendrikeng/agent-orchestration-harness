@@ -27,7 +27,7 @@ test('context:compile is deterministic when sources are unchanged', async () => 
     'utf8'
   ));
   assert.match(content, /## Run Control/);
-  assert.match(content, /Provider-native goals/);
+  assert.match(content, /Runtime-native goals/);
 });
 
 test('context:compile preserves adopted repository doc owner', async () => {
@@ -49,6 +49,31 @@ test('context:compile preserves adopted repository doc owner', async () => {
   ));
   assert.match(content, /^Owner: Platform Engineering$/m);
   assert.doesNotMatch(content, /^Owner: \{\{DOC_OWNER\}\}$/m);
+});
+
+test('context:compile prefers canonical owner over stale generated owner', async () => {
+  const rootDir = await createTemplateRepo();
+  const agentsPath = path.join(rootDir, 'AGENTS.md');
+  const generatedPath = path.join(rootDir, 'docs', 'generated', 'AGENT-RUNTIME-CONTEXT.md');
+  const agentsDoc = await fs.readFile(agentsPath, 'utf8');
+  const generatedDoc = await fs.readFile(generatedPath, 'utf8');
+  await fs.writeFile(
+    agentsPath,
+    String(agentsDoc).replace(`Owner: ${templatePlaceholder('DOC_OWNER')}`, 'Owner: Platform Engineering'),
+    'utf8'
+  );
+  await fs.writeFile(
+    generatedPath,
+    String(generatedDoc).replace(`Owner: ${templatePlaceholder('DOC_OWNER')}`, 'Owner: Stale Generated Owner'),
+    'utf8'
+  );
+
+  const result = runNode(path.join(rootDir, 'scripts', 'automation', 'compile-runtime-context.mjs'), [], rootDir);
+
+  assert.equal(result.status, 0, String(result.stderr));
+  const content = String(await fs.readFile(generatedPath, 'utf8'));
+  assert.match(content, /^Owner: Platform Engineering$/m);
+  assert.doesNotMatch(content, /^Owner: Stale Generated Owner$/m);
 });
 
 test('context:compile rejects output paths outside the repository', async () => {

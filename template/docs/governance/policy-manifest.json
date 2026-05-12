@@ -57,13 +57,8 @@
       "requiredInRuntimeContext": true
     },
     {
-      "id": "provider_native_execution_optional",
-      "statement": "Provider-native goals, subagents, handoffs, hooks, guardrails, traces, and background runs may be used, but the repository remains the durable control plane.",
-      "requiredInRuntimeContext": true
-    },
-    {
-      "id": "agent_adapters_are_subordinate",
-      "statement": "Agent-specific adapter files may exist only as thin entrypoints and must defer to canonical repo docs.",
+      "id": "runtime_native_execution_optional",
+      "statement": "Runtime-native goals, subagents, handoffs, hooks, guardrails, traces, and background runs may be used, but the repository remains the durable control plane.",
       "requiredInRuntimeContext": true
     },
     {
@@ -73,7 +68,7 @@
     },
     {
       "id": "canonical_policy_owner",
-      "statement": "General engineering rules live once in their canonical owner; supporting references, generated artifacts, and agent adapters must not fork policy.",
+      "statement": "General engineering rules live once in their canonical owner; supporting references and generated artifacts must not fork policy.",
       "requiredInRuntimeContext": true
     },
     {
@@ -122,7 +117,7 @@
   "runControl": {
     "goalDrivenRunControl": [
       "Treat user intent, acceptance criteria, constraints, validation path, blockers, and completion evidence as the goal contract.",
-      "Use provider-native goal, task, background-run, session, trace, and plan primitives when they improve reliability.",
+      "Use runtime-native goal, task, background-run, session, trace, and plan primitives when they improve reliability.",
       "Keep repo-local plans and evidence authoritative for work spanning sessions, agents, branches, or pull requests.",
       "Stop and re-scope when one goal becomes multiple independent outcomes or requires new security approval."
     ],
@@ -132,11 +127,10 @@
       "Every delegated task must name output, allowed write scope, relevant files, validation expectation, and tool boundaries.",
       "The main run remains responsible for integration, review, validation, and closeout."
     ],
-    "providerAdapterPolicy": [
-      "Provider-specific adapter files are thin entrypoints subordinate to AGENTS.md and canonical docs.",
+    "runtimeExecutionPolicy": [
       "Prefer deterministic checks, hooks, guardrails, typed tool schemas, and structured outputs over prompt-only reminders for repeatable constraints.",
-      "Treat provider memory, conversation state, encrypted reasoning items, background tasks, and compacted context as accelerators, not authority.",
-      "If provider behavior conflicts with repo policy, repo policy wins until a canonical doc change lands."
+      "Treat runtime memory, conversation state, encrypted reasoning items, background tasks, and compacted context as accelerators, not authority.",
+      "If runtime behavior conflicts with repo policy, repo policy wins until a canonical doc change lands."
     ],
     "completionAudit": [
       "Restate the objective as concrete deliverables or success criteria before claiming completion.",
@@ -152,7 +146,7 @@
       "Use the active or future plan as the current execution contract.",
       "Keep future and active must-land items as explicit checkboxes with stable backticked IDs.",
       "Prefer nearest live code examples before inventing new patterns.",
-      "Treat provider-native goals, sessions, background runs, compacted context, and encrypted reasoning items as transient execution aids unless their decisions are written back into repo-local artifacts."
+      "Treat runtime-native goals, sessions, background runs, compacted context, and encrypted reasoning items as transient execution aids unless their decisions are written back into repo-local artifacts."
     ],
     "improveBeforeRearchitecture": [
       "Better active-plan quality and explicit must-land scopes.",

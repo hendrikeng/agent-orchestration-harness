@@ -45,5 +45,5 @@ Source of Truth: This document.
 - Behavior changes must update docs in the same change.
 - Avoid parallel policy sources.
 - Current-state docs describe shipped behavior. Future plans describe intended behavior. Completed plans and evidence indexes describe delivery history.
-- Do not move policy into generated artifacts, PR descriptions, or agent-specific adapters; link back to the canonical owner.
+- Do not move policy into generated artifacts, PR descriptions, or runtime-specific notes; link back to the canonical owner.
 - Documentation-only changes still need validation through the relevant doc verifier.

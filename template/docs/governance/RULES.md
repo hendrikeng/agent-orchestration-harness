@@ -21,7 +21,7 @@ Source of Truth: This document.
 - Canonical docs must remain environment-agnostic: no personal machine paths, hostnames, credentials, or private runbooks.
 - `docs/governance/policy-manifest.json` is the machine-readable policy source for runtime context compilation.
 - `docs/governance/project-gates.json` is the machine-readable source for real project-specific lint, typecheck, test, build, migration, browser, release, and deploy gates.
-- `docs/agent-hardening/RUN_CONTROL.md` defines how provider-native goals, subagents, handoffs, hooks, guardrails, traces, and background runs plug into repo-local policy without becoming a mandatory orchestration layer.
+- `docs/agent-hardening/RUN_CONTROL.md` defines how runtime-native goals, subagents, handoffs, hooks, guardrails, traces, and background runs plug into repo-local policy without becoming a mandatory orchestration layer.
 
 ## Planning and Scope
 
@@ -53,7 +53,7 @@ Source of Truth: This document.
 
 - Translate implementation requests into verifiable goals before editing.
 - For multi-step work, pair each planned step with the check that proves it.
-- Use provider-native goal and loop features when useful, but keep the durable goal contract, handoff evidence, and completion audit in the repository.
+- Use runtime-native goal and loop features when useful, but keep the durable goal contract, handoff evidence, and completion audit in the repository.
 - Prefer the smallest implementation that satisfies the must-land checklist, and keep every changed line traceable to the user request, active plan, or required validation.
 - State material assumptions when intent has multiple plausible interpretations; ask or stop rather than silently choosing a risky path.
 
@@ -69,7 +69,7 @@ Source of Truth: This document.
 ## Policy Surface Model
 
 - Live canonical policy can define engineering rules: root canonical Markdown, top-level docs, agent hardening, architecture, design docs, governance, ops workflow docs, product-state docs, UI docs, machine-readable governance, and harness scripts/checks.
-- Supporting local guidance is subordinate: feature references and agent/provider adapter entrypoints may summarize or link, but they do not override canonical docs.
+- Supporting local guidance is subordinate: feature references and runtime-specific notes may summarize or link, but they do not override canonical docs.
 - Historical evidence is audit material: completed plans and evidence indexes may be corrected for metadata and links, but they are not rewritten into current policy.
 - Generated artifacts are rebuilt from canonical sources; do not hand-edit generated outputs to add policy.
 - When improving a rule, tighten the canonical owner first, then update generated context and enforcement checks if the rule is machine-readable.

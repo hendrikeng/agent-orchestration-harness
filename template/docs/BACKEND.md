@@ -32,6 +32,7 @@ Source of Truth: This document.
 ## Data And Persistence Rules
 
 - Use explicit schemas/contracts at persistence boundaries.
+- Use `docs/generated/db-schema.md` as the stable database schema entrypoint when the adopted project has a database.
 - Keep transaction boundaries explicit for multi-step critical writes.
 - Preserve auditability for critical state mutations.
 - Check existing relations and current query patterns before introducing new joins, many-to-many flows, or denormalized views.
@@ -40,6 +41,7 @@ Source of Truth: This document.
 ## Migration Integrity
 
 - Treat migrations, snapshots, generated schema artifacts, and seed data as one reviewable contract when the adopted stack uses them.
+- Keep `docs/generated/db-schema.md` current with the canonical schema source and migration head whenever schema-backed behavior changes.
 - Do not hand-edit generated migration artifacts as the default path; regenerate from the canonical schema source when the stack supports it.
 - If an unmerged local migration must change, prefer regenerating the latest local artifact set over stacking corrective migrations that obscure intent.
 - Data migrations and backfills require dry-run or preview behavior where practical, target selection, operator-readable logs, and rollback or fix-forward notes.

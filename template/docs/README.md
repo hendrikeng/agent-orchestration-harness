@@ -53,13 +53,14 @@ This file is the navigation and usage entrypoint for `docs/`. Use `docs/MANIFEST
 - Release mapping: `docs/ops/releases/release-mapping.md`
 - Generated artifact index: `docs/generated/README.md`
 - Runtime context snapshot: `docs/generated/AGENT-RUNTIME-CONTEXT.md`
+- Database schema reference: `docs/generated/db-schema.md`
 
 ## Documentation Classes
 
 - Live canonical policy: hand-maintained docs, machine-readable governance, and harness scripts/checks that define current engineering rules.
-- Supporting local guidance: feature references and agent/provider adapter entrypoints. Keep them concise and subordinate to canonical docs.
+- Supporting local guidance: feature references and runtime-specific notes. Keep them concise and subordinate to canonical docs.
 - Historical evidence: completed plans and evidence-index files. Preserve delivery history; fix metadata and links, but do not rewrite them into current policy.
-- Generated artifacts: rebuildable outputs derived from canonical policy or measured runs, such as `docs/generated/*`.
+- Generated artifacts: rebuildable outputs derived from canonical policy, schema sources, or measured runs, such as `docs/generated/*`.
 - Derived platform surfaces: optional repo-local exports or scaffolds for platform-native agents; these are scaffolds, not canonical policy.
 
 ## Layering Model

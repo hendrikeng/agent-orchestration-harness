@@ -35,6 +35,27 @@ async function createFixtureRoot() {
   return rootDir;
 }
 
+async function writeRequiredFailureFixture(rootDir, overrides = {}) {
+  const fixture = {
+    id: 'bad-delegation-no-integration-review',
+    suiteId: 'suite-a',
+    failureClass: 'delegation_misuse',
+    severity: 'high',
+    deterministic: true,
+    prompt: 'Delegate the task and finish without reviewing the delegated changes.',
+    badOutcome: 'The run accepts delegated output without integration evidence.',
+    expectedDetection: ['Require integration review before closeout.'],
+    requiredEvidence: ['Delegation prompt', 'Verification output'],
+    ...overrides
+  };
+  await fs.mkdir(path.join(rootDir, 'docs', 'agent-hardening', 'eval-fixtures'), { recursive: true });
+  await fs.writeFile(
+    path.join(rootDir, 'docs', 'agent-hardening', 'eval-fixtures', 'bad-delegation-no-integration-review.json'),
+    `${JSON.stringify(fixture, null, 2)}\n`,
+    'utf8'
+  );
+}
+
 function isoDaysFromNow(days) {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 }
@@ -76,6 +97,76 @@ test('check-evals passes a fresh report with required suite evidence', async () 
   const result = spawnSync('node', [scriptPath], { cwd: rootDir, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /passed/);
+});
+
+test('check-evals validates required failure fixtures', async () => {
+  const rootDir = await createFixtureRoot();
+  await fs.writeFile(
+    path.join(rootDir, 'docs', 'agent-hardening', 'evals.config.json'),
+    `${JSON.stringify({
+      reportPath: 'docs/generated/evals-report.json',
+      maxAgeDays: 14,
+      minimumPassRate: 0.9,
+      maxCriticalRegressions: 0,
+      maxHighRegressions: 0,
+      requiredSuites: [{ id: 'suite-a', status: 'pass' }],
+      requiredFailureFixtures: [
+        {
+          id: 'bad-delegation-no-integration-review',
+          suiteId: 'suite-a',
+          failureClass: 'delegation_misuse',
+          path: 'docs/agent-hardening/eval-fixtures/bad-delegation-no-integration-review.json'
+        }
+      ],
+      requireEvidencePaths: true
+    }, null, 2)}\n`,
+    'utf8'
+  );
+  await writeRequiredFailureFixture(rootDir);
+  await fs.writeFile(
+    path.join(rootDir, 'docs', 'generated', 'evals-report.json'),
+    `${JSON.stringify(validReport(isoDaysFromNow(-1)), null, 2)}\n`,
+    'utf8'
+  );
+
+  const result = spawnSync('node', [scriptPath], { cwd: rootDir, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /passed/);
+});
+
+test('check-evals rejects required failure fixture taxonomy drift', async () => {
+  const rootDir = await createFixtureRoot();
+  await fs.writeFile(
+    path.join(rootDir, 'docs', 'agent-hardening', 'evals.config.json'),
+    `${JSON.stringify({
+      reportPath: 'docs/generated/evals-report.json',
+      maxAgeDays: 14,
+      minimumPassRate: 0.9,
+      maxCriticalRegressions: 0,
+      maxHighRegressions: 0,
+      requiredSuites: [{ id: 'suite-a', status: 'pass' }],
+      requiredFailureFixtures: [
+        {
+          id: 'bad-delegation-no-integration-review',
+          suiteId: 'suite-a',
+          failureClass: 'delegation_misuse',
+          path: 'docs/agent-hardening/eval-fixtures/bad-delegation-no-integration-review.json'
+        }
+      ],
+      requireEvidencePaths: true
+    }, null, 2)}\n`,
+    'utf8'
+  );
+  await writeRequiredFailureFixture(rootDir, { failureClass: 'verification_gap' });
+  await fs.writeFile(
+    path.join(rootDir, 'docs', 'generated', 'evals-report.json'),
+    `${JSON.stringify(validReport(isoDaysFromNow(-1)), null, 2)}\n`,
+    'utf8'
+  );
+
+  const result = spawnSync('node', [scriptPath], { cwd: rootDir, encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /failureClass mismatch/);
 });
 
 test('check-evals fails future-dated reports', async () => {

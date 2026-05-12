@@ -13,7 +13,7 @@ If instructions conflict, this file is the behavioral priority entrypoint.
 - Docs-first minimal: this file is a concise map, not an execution playbook.
 - Humans define scope, constraints, owners, and acceptance criteria.
 - Agents execute scoped tasks using repo-local docs, code, and checks.
-- Provider-native goals, subagents, handoffs, hooks, guardrails, traces, and background runs are optional execution machinery, not harness requirements.
+- Runtime-native goals, subagents, handoffs, hooks, guardrails, traces, and background runs are optional execution machinery, not harness requirements.
 - Non-trivial work is planned in `docs/future/` before implementation.
 - Promotion, execution, review, and closeout are repo-local.
 
@@ -26,7 +26,7 @@ If instructions conflict, this file is the behavioral priority entrypoint.
 - Use one executable slice per plan file.
 - Keep future and active `## Must-Land Checklist` items as explicit checkboxes with stable backticked IDs.
 - Do not invent product behavior, schema, architecture, or workflow unsupported by code, docs, or explicit user intent.
-- Agent-specific adapter files are subordinate to this file and canonical docs.
+- Runtime-specific notes are subordinate to this file and canonical docs.
 
 ## Default Read Order
 
@@ -95,7 +95,7 @@ Every non-trivial code change should be reviewable as production engineering, no
 - Failure states are designed, not incidental.
 - The change avoids unnecessary abstraction, dead code, duplicate helpers, and wrappers that hide responsibility.
 - Validation is proportional to risk and names the exact commands, tests, screenshots, manual checks, or evidence used.
-- General rules live once in their canonical owner; supporting references and agent adapters summarize or link rather than forking policy.
+- General rules live once in their canonical owner; supporting references summarize or link rather than forking policy.
 - If the work cannot meet this bar in one slice, split the follow-up instead of landing a broad partially finished refactor.
 
 ## Critical Domain Invariants

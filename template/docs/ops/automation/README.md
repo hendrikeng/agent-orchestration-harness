@@ -17,7 +17,7 @@ Treat `docs/ops/automation/LITE_QUICKSTART.md` as the simplest day-to-day workfl
 - Keep docs, tests, validation, and evidence aligned with the change.
 - Make review focus on code quality, correctness, security, reliability, and user impact.
 - Preserve enough repo-local context for a fresh agent or engineer to resume safely.
-- Let provider-native goals, subagents, hooks, guardrails, traces, and background runs accelerate execution without making them mandatory workflow infrastructure.
+- Let runtime-native goals, subagents, hooks, guardrails, traces, and background runs accelerate execution without making them mandatory workflow infrastructure.
 
 ## Queue Model
 
@@ -33,7 +33,7 @@ Treat `docs/ops/automation/LITE_QUICKSTART.md` as the simplest day-to-day workfl
 
 - `AGENTS.md`: repo-level non-negotiables.
 - `docs/PLANS.md`: lifecycle and promotion discipline.
-- `docs/agent-hardening/RUN_CONTROL.md`: provider-native goal/delegation rules and completion-audit contract.
+- `docs/agent-hardening/RUN_CONTROL.md`: runtime-native goal/delegation rules and completion-audit contract.
 - Current future or active plan file: slice scope and must-land contract.
 - PR or change summary plus evidence index: review and closure record.
 - `docs/product-specs/CURRENT-STATE.md`: current product behavior snapshot.
@@ -52,7 +52,7 @@ Treat `docs/ops/automation/LITE_QUICKSTART.md` as the simplest day-to-day workfl
 
 - Work one active slice at a time unless the user explicitly coordinates parallel work with disjoint file ownership.
 - Parallel agent work must start from separate ready futures or active plans with non-overlapping `Implementation-Targets`, explicit dependencies, and separate evidence.
-- Do not add a separate orchestration layer for normal development work when provider-native run controls plus repo-local evidence can prove the same outcome.
+- Do not add a separate orchestration layer for normal development work when runtime-native run controls plus repo-local evidence can prove the same outcome.
 - Keep `Implementation-Targets`, `Risk-Tier`, `Validation-Lanes`, and `Security-Approval` truthful as scope changes.
 - Medium and high risk changes need review scrutiny before completion.
 - If the active slice becomes too broad, split follow-up work into `docs/future/` instead of expanding the plan indefinitely.

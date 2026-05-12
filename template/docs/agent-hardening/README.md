@@ -8,11 +8,11 @@ Source of Truth: This document and linked docs in this folder.
 ## Why This Exists
 
 - Agent quality, safety, and recovery rules must be explicit enough for a fresh agent or reviewer to enforce.
-- Hardening policy is canonical from repository bootstrap and applies before project-specific agent adapters add local detail.
+- Hardening policy is canonical from repository bootstrap and applies before project-specific runtime notes add local detail.
 - This folder defines stack-agnostic contracts for run control, evals, observability, tool use, and memory/context behavior.
 - The harness must optimize for durable outcomes: correct code, auditable decisions, resumable work, and fast recovery after interruption.
 - Any agent workflow that cannot leave evidence, explain tool choices, or resume from repo-local context is not production-ready.
-- The blueprint is not an orchestration runtime. Provider-native goals, background runs, subagents, handoffs, hooks, guardrails, and traces are useful execution machinery, but repo-local plans, docs, checks, and evidence remain the durable control plane.
+- The blueprint is not an orchestration runtime. Runtime-native goals, background runs, subagents, handoffs, hooks, guardrails, and traces are useful execution machinery, but repo-local plans, docs, checks, and evidence remain the durable control plane.
 
 ## Canonical Documents
 
