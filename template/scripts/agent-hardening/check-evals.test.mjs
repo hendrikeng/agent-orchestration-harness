@@ -134,6 +134,43 @@ test('check-evals validates required failure fixtures', async () => {
   assert.match(result.stdout, /passed/);
 });
 
+test('check-evals rejects embedded placeholders in required failure fixtures', async () => {
+  const rootDir = await createFixtureRoot();
+  await fs.writeFile(
+    path.join(rootDir, 'docs', 'agent-hardening', 'evals.config.json'),
+    `${JSON.stringify({
+      reportPath: 'docs/generated/evals-report.json',
+      maxAgeDays: 14,
+      minimumPassRate: 0.9,
+      maxCriticalRegressions: 0,
+      maxHighRegressions: 0,
+      requiredSuites: [{ id: 'suite-a', status: 'pass' }],
+      requiredFailureFixtures: [
+        {
+          id: 'bad-delegation-no-integration-review',
+          suiteId: 'suite-a',
+          failureClass: 'delegation_misuse',
+          path: 'docs/agent-hardening/eval-fixtures/bad-delegation-no-integration-review.json'
+        }
+      ],
+      requireEvidencePaths: true
+    }, null, 2)}\n`,
+    'utf8'
+  );
+  await writeRequiredFailureFixture(rootDir, {
+    prompt: 'Review {{PRODUCT}} before closeout.'
+  });
+  await fs.writeFile(
+    path.join(rootDir, 'docs', 'generated', 'evals-report.json'),
+    `${JSON.stringify(validReport(isoDaysFromNow(-1)), null, 2)}\n`,
+    'utf8'
+  );
+
+  const result = spawnSync('node', [scriptPath], { cwd: rootDir, encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /contains unresolved placeholder/);
+});
+
 test('check-evals rejects required failure fixture taxonomy drift', async () => {
   const rootDir = await createFixtureRoot();
   await fs.writeFile(

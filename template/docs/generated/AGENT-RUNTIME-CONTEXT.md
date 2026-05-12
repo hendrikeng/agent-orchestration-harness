@@ -46,7 +46,8 @@ Canonical entrypoints:
 - `one_slice_one_plan`: One executable slice maps to one future or active plan file; split broader work into ordered slices with explicit dependencies.
 - `review_is_required`: Non-trivial implementation work needs review scrutiny for correctness, security, reliability, missing tests, docs, and evidence before it is treated as done.
 - `no_destructive_git_without_instruction`: Never run destructive git or file commands without explicit written instruction.
-- `runtime_native_execution_optional`: Runtime-native goals, subagents, handoffs, hooks, guardrails, traces, and background runs may be used, but the repository remains the durable control plane.
+- `runtime_native_execution_optional`: Runtime-native goals, subagents, handoffs, hooks, guardrails, traces, automations, and background runs may be used as replaceable execution adapters, but the repository remains the durable control plane.
+- `continuation_packet_required`: Pause, context compaction, background handoff, and agent handoff require a continuation packet with objective, active plan, acceptance criteria, changed files, validation status, evidence paths, blockers, and next action.
 - `quality_bar_is_binding`: Non-trivial changes must clear the quality bar for correctness, contracts, maintainability, reliability, security, user experience, and evidence.
 - `canonical_policy_owner`: General engineering rules live once in their canonical owner; supporting references and generated artifacts must not fork policy.
 - `real_project_gates_required`: Adopted projects must wire real lint, typecheck, test, and build gates or explicitly justify deferred or not-applicable gates in docs/governance/project-gates.json.
@@ -73,13 +74,17 @@ Canonical entrypoints:
 
 - goal: Treat user intent, acceptance criteria, constraints, validation path, blockers, and completion evidence as the goal contract.
 - goal: Use runtime-native goal, task, background-run, session, trace, and plan primitives when they improve reliability.
+- goal: Do not add a repo-local scheduler, custom agent chain, or orchestration daemon when runtime-native execution plus repo-local plans, checks, and evidence can carry the work.
 - goal: Keep repo-local plans and evidence authoritative for work spanning sessions, agents, branches, or pull requests.
 - goal: Stop and re-scope when one goal becomes multiple independent outcomes or requires new security approval.
 - delegate: Delegate bounded sidecar work only when it can run independently without blocking the immediate next local step.
 - delegate: Keep urgent critical-path work in the main run when the next action depends on the result.
 - delegate: Every delegated task must name output, allowed write scope, relevant files, validation expectation, and tool boundaries.
 - delegate: The main run remains responsible for integration, review, validation, and closeout.
+- runtime: Treat runtime-native goals, background tasks, automations, subagents, hooks, and traces as replaceable execution adapters, not as blueprint-owned orchestration.
 - runtime: Prefer deterministic checks, hooks, guardrails, typed tool schemas, and structured outputs over prompt-only reminders for repeatable constraints.
+- runtime: Before pause, context compaction, background handoff, or agent handoff, preserve a continuation packet with objective, active plan, acceptance criteria, changed files, validation status, evidence paths, blockers, and next action.
+- runtime: Autonomous or background execution is ready only when the goal contract, approval boundaries, project gates, traceability, and closeout evidence are explicit before the run starts.
 - runtime: Treat runtime memory, conversation state, encrypted reasoning items, background tasks, and compacted context as accelerators, not authority.
 - runtime: If runtime behavior conflicts with repo policy, repo policy wins until a canonical doc change lands.
 - audit: Restate the objective as concrete deliverables or success criteria before claiming completion.

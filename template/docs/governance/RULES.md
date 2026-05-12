@@ -22,6 +22,7 @@ Source of Truth: This document.
 - `docs/governance/policy-manifest.json` is the machine-readable policy source for runtime context compilation.
 - `docs/governance/project-gates.json` is the machine-readable source for real project-specific lint, typecheck, test, build, migration, browser, release, and deploy gates.
 - `docs/agent-hardening/RUN_CONTROL.md` defines how runtime-native goals, subagents, handoffs, hooks, guardrails, traces, and background runs plug into repo-local policy without becoming a mandatory orchestration layer.
+- Runtime-native execution features are replaceable adapters; repo-local plans, checks, and evidence are the durable control plane.
 
 ## Planning and Scope
 
@@ -54,6 +55,7 @@ Source of Truth: This document.
 - Translate implementation requests into verifiable goals before editing.
 - For multi-step work, pair each planned step with the check that proves it.
 - Use runtime-native goal and loop features when useful, but keep the durable goal contract, handoff evidence, and completion audit in the repository.
+- Preserve a continuation packet before pause, context compaction, background handoff, or agent handoff.
 - Prefer the smallest implementation that satisfies the must-land checklist, and keep every changed line traceable to the user request, active plan, or required validation.
 - State material assumptions when intent has multiple plausible interpretations; ask or stop rather than silently choosing a risky path.
 

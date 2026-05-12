@@ -9,6 +9,7 @@ Source of Truth: This document.
 
 - Treat a goal as the durable execution contract: user intent, acceptance criteria, constraints, validation path, current state, blockers, and completion evidence.
 - Prefer runtime-native goal, task, plan, session, trace, and background-run primitives when they improve reliability, but do not make any runtime session the repository source of truth.
+- Do not add a repo-local scheduler, custom agent chain, or orchestration daemon when runtime-native execution plus repo-local plans, checks, and evidence can carry the work.
 - Keep the repo-local plan and evidence authoritative for work that spans sessions, agents, branches, or pull requests.
 - Before editing, translate the request into the smallest verifiable outcome and identify the check that will prove it.
 - During execution, update the current plan, evidence, or docs whenever the goal boundary changes.
@@ -30,10 +31,13 @@ Source of Truth: This document.
 ## Runtime Execution Contract
 
 - Runtime-native execution machinery is optional; repo-local contracts, validation, and evidence remain mandatory.
+- Treat runtime-native goals, background tasks, automations, subagents, hooks, and traces as replaceable execution adapters, not as blueprint-owned orchestration.
 - Prefer deterministic checks, hooks, guardrails, typed tool schemas, and structured outputs over prompt-only reminders for repeatable safety constraints.
 - Use model handoffs or subagents only when the responsibility boundary is explicit and the receiving agent has enough context to succeed without inheriting irrelevant main-thread state.
 - Use tool-level validation for tool calls whenever possible; workflow-level input/output checks alone are not enough for delegated or multi-agent tool paths.
 - Preserve traceability for model calls, tool calls, handoffs, guardrails, approvals, file edits, and validation results in the run trace or evidence path.
+- Before pause, context compaction, background handoff, or agent handoff, preserve a continuation packet with objective, active plan, acceptance criteria, changed files, validation status, evidence paths, blockers, and next action.
+- Autonomous or background execution is ready only when the goal contract, approval boundaries, project gates, traceability, and closeout evidence are explicit before the run starts.
 - Treat runtime memory, conversation state, encrypted reasoning items, background tasks, and compacted context as accelerators, not authority. Durable decisions must land in repo-local docs, plans, tests, manifests, or evidence.
 - If runtime behavior conflicts with repo policy, repo policy wins until an explicit canonical doc change lands.
 

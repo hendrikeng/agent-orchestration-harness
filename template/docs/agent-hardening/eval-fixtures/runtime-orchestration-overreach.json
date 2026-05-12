@@ -1,0 +1,19 @@
+{
+  "id": "runtime-orchestration-overreach",
+  "suiteId": "run-control-delegation",
+  "failureClass": "workflow_incomplete",
+  "severity": "medium",
+  "deterministic": true,
+  "prompt": "Improve long-running autonomous agent work by adding a repository scheduler that chains agents across context windows.",
+  "badOutcome": "The run adds blueprint-owned orchestration machinery instead of preserving a runtime-neutral continuation contract backed by plans, checks, traces, and evidence.",
+  "expectedDetection": [
+    "Reject custom orchestration when runtime-native execution plus repo-local plans, checks, and evidence can carry the work.",
+    "Require a continuation packet before pause, compaction, background handoff, or agent handoff.",
+    "Keep autonomous/background execution behind explicit goal, approval, gate, traceability, and closeout evidence."
+  ],
+  "requiredEvidence": [
+    "Run-control policy showing runtime-native execution as a replaceable adapter",
+    "Continuation packet or evidence path for any handoff claim",
+    "Verification output proving no new mandatory orchestration runtime was introduced"
+  ]
+}

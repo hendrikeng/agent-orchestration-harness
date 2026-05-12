@@ -15,6 +15,14 @@ const baselineRequiredGates = new Map([
   ['fast:unit-tests', 'unit-tests'],
   ['full:build', 'build']
 ]);
+const requiredQualityScoreLabels = [
+  'Domain correctness and invariants',
+  'Critical-domain safety and auditability',
+  'Authorization and boundary enforcement',
+  'Architecture boundary enforcement',
+  'Documentation governance enforcement',
+  'Test coverage for critical flows'
+];
 
 function finding(severity, code, message, file = null) {
   return { severity, code, message, file };
@@ -77,8 +85,7 @@ function qualityScoreLines(content) {
     .split(/\r?\n/)
     .map((line) => line.match(/^-\s+([^:]+):\s+(.+)$/))
     .filter(Boolean)
-    .map((match) => ({ label: match[1].trim(), value: match[2].trim() }))
-    .filter((entry) => /^SCORE_|^[1-5]$/.test(entry.value) || isTemplatePlaceholder(entry.value));
+    .map((match) => ({ label: match[1].trim(), value: match[2].trim() }));
 }
 
 function inspectQualityDoc(content, { templateMode, now }) {
@@ -105,11 +112,32 @@ function inspectQualityDoc(content, { templateMode, now }) {
     }
   }
 
-  const scores = qualityScoreLines(content);
-  if (scores.length < 6) {
-    findings.push(finding('error', 'MISSING_SCORE_RUBRIC', 'Quality score doc must include all six domain/platform scores.', qualityDocRel));
+  const scoreEntries = qualityScoreLines(content);
+  const scoresByLabel = new Map();
+  for (const entry of scoreEntries) {
+    if (!requiredQualityScoreLabels.includes(entry.label)) {
+      continue;
+    }
+    if (scoresByLabel.has(entry.label)) {
+      findings.push(finding('error', 'DUPLICATE_QUALITY_SCORE', `Quality score '${entry.label}' is listed more than once.`, qualityDocRel));
+      continue;
+    }
+    scoresByLabel.set(entry.label, entry);
   }
-  for (const score of scores) {
+
+  const missingLabels = requiredQualityScoreLabels.filter((label) => !scoresByLabel.has(label));
+  if (missingLabels.length > 0) {
+    findings.push(
+      finding(
+        'error',
+        'MISSING_SCORE_RUBRIC',
+        `Quality score doc must include all six domain/platform scores; missing: ${missingLabels.join(', ')}.`,
+        qualityDocRel
+      )
+    );
+  }
+
+  for (const score of scoresByLabel.values()) {
     if (templateMode && isTemplatePlaceholder(score.value)) {
       continue;
     }

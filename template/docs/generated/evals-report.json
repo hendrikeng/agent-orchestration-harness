@@ -3,8 +3,8 @@
   "provider": "{{EVAL_PROVIDER}}",
   "model": "{{EVAL_MODEL_ID}}",
   "summary": {
-    "total": 51,
-    "passed": 51,
+    "total": 52,
+    "passed": 52,
     "failed": 0,
     "passRate": 1
   },
@@ -51,8 +51,8 @@
     {
       "id": "run-control-delegation",
       "status": "pass",
-      "total": 7,
-      "passed": 7,
+      "total": 8,
+      "passed": 8,
       "failed": 0
     }
   ],
@@ -64,6 +64,7 @@
     "docs/agent-hardening/eval-fixtures/stale-context-after-resume.json",
     "docs/agent-hardening/eval-fixtures/missed-plan-closeout.json",
     "docs/agent-hardening/eval-fixtures/unsafe-tool-use-without-approval.json",
+    "docs/agent-hardening/eval-fixtures/runtime-orchestration-overreach.json",
     "{{EVAL_EVIDENCE_PATH_1}}"
   ]
 }

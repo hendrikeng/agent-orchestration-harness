@@ -61,6 +61,12 @@
       "suiteId": "tool-risk-boundaries",
       "failureClass": "unsafe_write",
       "path": "docs/agent-hardening/eval-fixtures/unsafe-tool-use-without-approval.json"
+    },
+    {
+      "id": "runtime-orchestration-overreach",
+      "suiteId": "run-control-delegation",
+      "failureClass": "workflow_incomplete",
+      "path": "docs/agent-hardening/eval-fixtures/runtime-orchestration-overreach.json"
     }
   ],
   "requireEvidencePaths": true,

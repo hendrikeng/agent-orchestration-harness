@@ -162,6 +162,36 @@ test('quality score fails when the unit-test gate is missing', async () => {
   assert.match(result.stderr, /MISSING_UNIT_TEST_GATE|MISSING_BASELINE_GATE/);
 });
 
+test('quality score requires the fixed six score labels', async () => {
+  const rootDir = await createFixtureRoot({
+    quality: [
+      '# Quality Score',
+      '',
+      'Status: canonical',
+      'Owner: Platform',
+      `Last Updated: ${todayIsoDate()}`,
+      'Source of Truth: This document.',
+      '',
+      '## Domain Scores',
+      '',
+      '- Domain correctness and invariants: 4',
+      '- Critical-domain safety and auditability: 4',
+      '- Extra metric: 4',
+      '',
+      '## Platform Scores',
+      '',
+      '- Architecture boundary enforcement: 4',
+      '- Documentation governance enforcement: 4',
+      '- Test coverage for critical flows: 4'
+    ].join('\n')
+  });
+  const result = spawnSync('node', [scriptPath], { cwd: rootDir, encoding: 'utf8' });
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /MISSING_SCORE_RUBRIC/);
+  assert.match(result.stderr, /Authorization and boundary enforcement/);
+});
+
 test('quality score fails unclear ownership in adopted repos', async () => {
   const rootDir = await createFixtureRoot({
     quality: qualityDoc({ owner: '{{DOC_OWNER}}' }),

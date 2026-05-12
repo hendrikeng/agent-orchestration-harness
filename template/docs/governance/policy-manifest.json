@@ -58,7 +58,12 @@
     },
     {
       "id": "runtime_native_execution_optional",
-      "statement": "Runtime-native goals, subagents, handoffs, hooks, guardrails, traces, and background runs may be used, but the repository remains the durable control plane.",
+      "statement": "Runtime-native goals, subagents, handoffs, hooks, guardrails, traces, automations, and background runs may be used as replaceable execution adapters, but the repository remains the durable control plane.",
+      "requiredInRuntimeContext": true
+    },
+    {
+      "id": "continuation_packet_required",
+      "statement": "Pause, context compaction, background handoff, and agent handoff require a continuation packet with objective, active plan, acceptance criteria, changed files, validation status, evidence paths, blockers, and next action.",
       "requiredInRuntimeContext": true
     },
     {
@@ -118,6 +123,7 @@
     "goalDrivenRunControl": [
       "Treat user intent, acceptance criteria, constraints, validation path, blockers, and completion evidence as the goal contract.",
       "Use runtime-native goal, task, background-run, session, trace, and plan primitives when they improve reliability.",
+      "Do not add a repo-local scheduler, custom agent chain, or orchestration daemon when runtime-native execution plus repo-local plans, checks, and evidence can carry the work.",
       "Keep repo-local plans and evidence authoritative for work spanning sessions, agents, branches, or pull requests.",
       "Stop and re-scope when one goal becomes multiple independent outcomes or requires new security approval."
     ],
@@ -128,7 +134,10 @@
       "The main run remains responsible for integration, review, validation, and closeout."
     ],
     "runtimeExecutionPolicy": [
+      "Treat runtime-native goals, background tasks, automations, subagents, hooks, and traces as replaceable execution adapters, not as blueprint-owned orchestration.",
       "Prefer deterministic checks, hooks, guardrails, typed tool schemas, and structured outputs over prompt-only reminders for repeatable constraints.",
+      "Before pause, context compaction, background handoff, or agent handoff, preserve a continuation packet with objective, active plan, acceptance criteria, changed files, validation status, evidence paths, blockers, and next action.",
+      "Autonomous or background execution is ready only when the goal contract, approval boundaries, project gates, traceability, and closeout evidence are explicit before the run starts.",
       "Treat runtime memory, conversation state, encrypted reasoning items, background tasks, and compacted context as accelerators, not authority.",
       "If runtime behavior conflicts with repo policy, repo policy wins until a canonical doc change lands."
     ],

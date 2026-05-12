@@ -17,6 +17,8 @@ const failureClasses = new Set([
   'regression_escape'
 ]);
 const severities = new Set(['critical', 'high', 'medium', 'low']);
+const templatePlaceholderPattern = /\{\{[A-Z0-9_]+\}\}/;
+const exactTemplatePlaceholderPattern = /^\{\{[A-Z0-9_]+\}\}$/;
 
 function fail(message) {
   console.error(`[eval-verify] ${message}`);
@@ -28,7 +30,11 @@ function isObject(value) {
 }
 
 function isTemplatePlaceholder(value) {
-  return /^\{\{[A-Z0-9_]+\}\}$/.test(String(value ?? '').trim());
+  return exactTemplatePlaceholderPattern.test(String(value ?? '').trim());
+}
+
+function containsTemplatePlaceholder(value) {
+  return templatePlaceholderPattern.test(String(value ?? ''));
 }
 
 function toIsoDate(value) {
@@ -124,7 +130,7 @@ function assertNonEmptyStringArray(value, fieldName, fixtureId) {
 
 function assertNoPlaceholder(value, fieldPath) {
   if (typeof value === 'string') {
-    if (isTemplatePlaceholder(value)) {
+    if (containsTemplatePlaceholder(value)) {
       fail(`Failure fixture field '${fieldPath}' contains unresolved placeholder: ${value}`);
     }
     return;
@@ -382,7 +388,7 @@ async function main() {
       if (!evidenceRel) {
         fail('Eval evidence entries must be non-empty strings.');
       }
-      if (isTemplatePlaceholder(evidenceRel)) {
+      if (containsTemplatePlaceholder(evidenceRel)) {
         fail(`Eval evidence path contains unresolved placeholder: ${evidenceRel}`);
       }
       const evidenceAbs = path.resolve(rootDir, evidenceRel);
