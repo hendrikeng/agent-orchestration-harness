@@ -79,7 +79,7 @@ Produce a bootstrap decision packet:
 7. propose the first executable future slices with acceptance criteria, dependencies, validation lanes, evidence expectations, and risk tiers,
 8. call out any missing decision that blocks safe execution.
 
-Treat this as an OpenAI-caliber engineering blueprint: explicit contracts, small executable slices, strong defaults, proof-oriented validation, and no invented product behavior.
+Treat this as a production engineering blueprint: explicit contracts, small executable slices, strong defaults, proof-oriented validation, and no invented product behavior.
 Stop after the decision-complete planning output. Do not replace placeholders, merge package scripts, create product code, or run verification until I approve execution.
 ```
 
@@ -101,14 +101,6 @@ Assume the template has already been installed into the current repository root.
 9. Run the strongest relevant verification available and report the exact commands and evidence.
 
 Keep the work agent-portable: any capable coding agent must be able to resume from repository-local docs, plans, code, validation output, and evidence.
-```
-
-Quality goal prompt:
-
-```text
-Use this repository as a state-of-the-art agent-assisted engineering blueprint.
-Act like a senior architecture and quality team: prefer clear boundaries, typed contracts, server-side authority, secure defaults, reliable failure handling, maintainable UI/backend structure, focused tests, and evidence-backed completion.
-Do not add process for its own sake. Every rule must either prevent real bugs, improve code quality, preserve context, protect users/data, or make future changes easier to review safely.
 ```
 
 ## Root Commands
