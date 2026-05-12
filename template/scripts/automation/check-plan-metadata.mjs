@@ -6,7 +6,6 @@ import {
   COMPLETED_STATUSES,
   DELIVERY_CLASSES,
   FUTURE_STATUSES,
-  LEGACY_METADATA_FIELDS,
   PRIORITIES,
   REQUIRED_METADATA_FIELDS,
   RISK_TIERS,
@@ -34,14 +33,9 @@ const PLAN_SECTION_TITLES = [
   'Must-Land Checklist',
   'Deferred Follow-Ons'
 ];
-const LEGACY_SECTION_TITLES = [
-  'Capability Coverage Matrix',
-  'Child Slice Definitions',
-  'Master Plan Coverage',
-  'Promotion Blockers',
-  'Prior Completed Plan Reconciliation',
-  'Validation Contract'
-];
+const SUPPORTED_METADATA_FIELDS = new Set(
+  REQUIRED_METADATA_FIELDS.future.map((field) => field.toLowerCase())
+);
 
 function parseArgs(argv) {
   const options = {};
@@ -137,14 +131,13 @@ function validateRequiredMetadata(plan, findings) {
   }
 }
 
-function validateLegacyMetadata(plan, findings) {
-  for (const field of LEGACY_METADATA_FIELDS) {
-    const value = metadataValue(plan.metadata, field);
-    if (String(value ?? '').trim()) {
+function validateSupportedMetadata(plan, findings) {
+  for (const field of plan.metadata.keys()) {
+    if (!SUPPORTED_METADATA_FIELDS.has(field)) {
       addFinding(
         findings,
-        'LEGACY_METADATA_FIELD',
-        `Legacy metadata field '${field}' is not supported in the flat queue harness.`,
+        'UNSUPPORTED_METADATA_FIELD',
+        `Unsupported metadata field '${field}'.`,
         plan.rel
       );
     }
@@ -153,8 +146,8 @@ function validateLegacyMetadata(plan, findings) {
   if (topLevelValidationReady) {
     addFinding(
       findings,
-      'LEGACY_TOP_LEVEL_FIELD',
-      "Top-level 'Validation-Ready' is not supported in the flat queue harness.",
+      'UNSUPPORTED_TOP_LEVEL_FIELD',
+      "Top-level plan state fields are not supported; keep plan state in the Metadata section.",
       plan.rel
     );
   }
@@ -279,17 +272,6 @@ function validatePlanSections(plan, findings) {
     }
   }
 
-  for (const title of LEGACY_SECTION_TITLES) {
-    if (sectionBody(plan.content, title)) {
-      addFinding(
-        findings,
-        'LEGACY_SECTION',
-        `Legacy section '## ${title}' is not supported in the flat queue harness.`,
-        plan.rel
-      );
-    }
-  }
-
   const mustLand = parseMustLandChecklist(plan.content);
   if (mustLand.length === 0) {
     addFinding(findings, 'EMPTY_MUST_LAND', 'Must-Land Checklist must contain at least one checkbox item.', plan.rel);
@@ -320,7 +302,7 @@ async function main() {
       continue;
     }
     validateRequiredMetadata(plan, findings);
-    validateLegacyMetadata(plan, findings);
+    validateSupportedMetadata(plan, findings);
     validatePlanIdentity(plan, findings, seenPlanIds);
     validateStatus(plan, findings);
     validateMetadataValues(plan, findings, allPlanIds);

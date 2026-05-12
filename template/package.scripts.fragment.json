@@ -1,20 +1,25 @@
 {
   "scripts": {
+    "bootstrap:verify": "bash ./scripts/bootstrap-verify.sh",
     "context:compile": "node ./scripts/automation/compile-runtime-context.mjs",
     "docs:verify": "node ./scripts/docs/check-governance.mjs",
     "conformance:verify": "node ./scripts/check-article-conformance.mjs",
     "architecture:verify": "node ./scripts/architecture/check-dependencies.mjs",
     "agent:verify": "node ./scripts/agent-hardening/check-agent-hardening.mjs",
-    "eval:continuity": "node ./scripts/agent-hardening/run-continuity-evals.mjs",
-    "eval:resilience": "node ./scripts/agent-hardening/run-resilience-evals.mjs",
+    "path-policy:verify": "node ./scripts/automation/check-path-policy.mjs",
+    "pr:verify": "node ./scripts/automation/check-pr-contract.mjs",
     "eval:verify": "node ./scripts/agent-hardening/check-evals.mjs",
+    "project:gates:verify": "node ./scripts/automation/check-project-gates.mjs",
+    "project:gates:fast": "node ./scripts/automation/check-project-gates.mjs --profile fast --run",
+    "project:gates:full": "node ./scripts/automation/check-project-gates.mjs --profile full --run",
+    "lint:changed": "node ./scripts/automation/lint-changed.mjs",
     "harness:verify": "node ./scripts/automation/check-harness-alignment.mjs",
     "plans:verify": "node ./scripts/automation/check-plan-metadata.mjs",
+    "plans:verify:closeout": "node ./scripts/automation/check-plan-closeout.mjs",
+    "release:notes": "node ./scripts/automation/release-notes.mjs",
+    "release:verify": "node ./scripts/automation/release-verify.mjs",
     "verify:fast": "node ./scripts/automation/verify-fast.mjs",
     "verify:full": "node ./scripts/automation/verify-full.mjs",
-    "automation:run": "node ./scripts/automation/orchestrator.mjs run",
-    "automation:resume": "node ./scripts/automation/orchestrator.mjs resume",
-    "automation:grind": "node ./scripts/automation/orchestrator.mjs grind",
-    "automation:audit": "node ./scripts/automation/orchestrator.mjs audit"
+    "verify:deploy": "node ./scripts/automation/verify-deploy.mjs"
   }
 }

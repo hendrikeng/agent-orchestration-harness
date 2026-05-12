@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { validatePrContract } from '../../template/scripts/automation/pr-contract-lib.mjs';
 
 const rootDir = process.cwd();
 const templateDir = path.join(rootDir, 'template');
@@ -44,12 +45,20 @@ function replacementForToken(token) {
     BACKEND_STACK: 'node',
     DATA_STACK: 'json-files',
     SHARED_CONTRACT_STRATEGY: 'versioned json contracts',
-    CRITICAL_DOMAIN_SET: 'automation state, plan transitions, validation outputs',
-    SERVER_AUTHORITY_BOUNDARY_SET: 'orchestrator state mutation, validation gating',
+    CRITICAL_DOMAIN_SET: 'plan transitions, validation outputs, evidence records',
+    SERVER_AUTHORITY_BOUNDARY_SET: 'privileged writes, lifecycle transitions, validation gating',
     MONEY_AND_NUMERIC_RULE: 'not applicable',
     CODEOWNERS_DEFAULT_TEAM: '@smoke/platform',
     CODEOWNERS_SECURITY_TEAM: '@smoke/security',
+    NODE_VERSION: '24',
+    CI_INSTALL_COMMAND: 'npm install --ignore-scripts',
+    PACKAGE_MANAGER_CACHE: 'npm',
+    PACKAGE_MANAGER_LOCKFILE: 'package-lock.json',
     ESLINT_CONFIG_PATH: 'package.json',
+    PROJECT_LINT_COMMAND: 'node ./scripts/automation/check-harness-alignment.mjs',
+    PROJECT_TYPECHECK_COMMAND: 'node ./scripts/automation/check-plan-metadata.mjs',
+    PROJECT_UNIT_TEST_COMMAND: 'node ./scripts/automation/check-harness-alignment.mjs',
+    PROJECT_BUILD_COMMAND: 'node ./scripts/docs/check-governance.mjs',
     PROJECT_JSON_PATH_1: 'package.json',
     PROJECT_JSON_PATH_2: 'package.json',
     PROJECT_REQUIRED_TAG_1: 'scope:smoke',
@@ -140,8 +149,7 @@ async function writePackageJson(repoDir) {
 async function assertPackageJsonDriftFails(repoDir) {
   const packageJsonPath = path.join(repoDir, 'package.json');
   const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
-  packageJson.scripts['automation:run:parallel'] =
-    'node ./scripts/automation/orchestrator.mjs run-parallel';
+  packageJson.scripts['verify:fast'] = 'node ./scripts/docs/check-governance.mjs';
   await fs.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
 
   const result = spawnSync('npm run harness:verify', {
@@ -154,7 +162,41 @@ async function assertPackageJsonDriftFails(repoDir) {
     throw result.error;
   }
   if ((result.status ?? 1) === 0) {
-    throw new Error('Expected harness:verify to fail when package.json contains retired scripts.');
+    throw new Error('Expected harness:verify to fail when a required package script drifts.');
+  }
+}
+
+async function assertPullRequestTemplatesMatchVerifier(repoDir) {
+  const templates = [
+    {
+      path: '.github/PULL_REQUEST_TEMPLATE/slice.md',
+      headRef: 'slice/smoke-contract',
+      baseRef: 'dev'
+    },
+    {
+      path: '.github/PULL_REQUEST_TEMPLATE/fix.md',
+      headRef: 'fix/smoke-contract',
+      baseRef: 'dev'
+    },
+    {
+      path: '.github/PULL_REQUEST_TEMPLATE/release.md',
+      headRef: 'release/2026.05.12.1',
+      baseRef: 'main'
+    }
+  ];
+
+  for (const template of templates) {
+    const body = await fs.readFile(path.join(repoDir, template.path), 'utf8');
+    const findings = validatePrContract({
+      headRef: template.headRef,
+      baseRef: template.baseRef,
+      body
+    });
+    if (findings.length > 0) {
+      throw new Error(
+        `${template.path} does not satisfy pr:verify markers:\n${findings.map((finding) => `- ${finding}`).join('\n')}`
+      );
+    }
   }
 }
 
@@ -180,6 +222,7 @@ async function main() {
   await fs.cp(templateDir, repoDir, { recursive: true });
   await replaceTemplatePlaceholders(repoDir);
   await writePackageJson(repoDir);
+  await assertPullRequestTemplatesMatchVerifier(repoDir);
 
   const commands = [
     'npm run harness:verify',

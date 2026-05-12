@@ -1,4 +1,4 @@
-# GitHub Interop Mapping
+# GitHub Interop
 
 Status: canonical
 Owner: {{DOC_OWNER}}
@@ -7,51 +7,30 @@ Source of Truth: This document.
 
 ## Purpose
 
-Define the optional bridge from harness policy/runtime contracts to GitHub-native agent profile scaffolds.
-Canonical policy still lives in the repository docs, not in GitHub-specific exports.
+Describe the optional GitHub mapping for projects that use GitHub pull requests and Actions.
+Canonical policy still lives in repository docs.
 
-## Inputs
+## Recommended Mapping
 
-- `AGENTS.md`
-- `docs/governance/policy-manifest.json`
-- `docs/ops/automation/orchestrator.config.json`
+- Pull requests carry the change summary, validation summary, docs touched, and risk notes.
+- Branch protection should require review and the project’s chosen fast/full gates.
+- PR templates should separate planned slices, small fixes, and releases when those lanes are adopted.
+- CODEOWNERS should route security, identity, payment, migration, and governance-sensitive paths to appropriate owners.
+- GitHub Actions should call repository scripts rather than duplicating policy in workflow YAML.
+- The generic `ci` workflow calls `pr:verify`, `plans:verify:closeout`, `verify:fast`, `verify:full`, and `release:verify`; add provider-specific preview/deploy workflows only after documenting them in ops docs.
+- The generic release-tag workflow tags merged `release/YYYY.MM.DD.N` PRs into `main` as `vYYYY.MM.DD.N`.
 
-## Mapped Concepts
+## Branch And PR Lanes
 
-- Safety policy:
-  - Source: `policy-manifest.mandatorySafetyRules`
-  - Export: baseline policy profile.
-- Role profiles:
-  - Source: runtime/planning role profiles in policy + executor config
-  - Export: role capability profile (`planner`, `explorer`, `worker`, `reviewer`).
-- Risk routing:
-  - Source: sequential runtime routing (`low`, `medium`, `high`)
-  - Export: lane routing map for `worker` and `reviewer`.
-- Validation lanes:
-  - Source: `orchestrator.config.validation`
-  - Export: always/host-required checks metadata.
-- Canonical entrypoints:
-  - Source: `policy-manifest.docContract.canonicalEntryPoints`
-  - Export: docs entrypoint hints.
+- `slice/* -> dev`: planned implementation slice using the slice PR template.
+- `fix/* -> dev`: small, isolated, low-risk fix using the fix PR template.
+- `release/YYYY.MM.DD.N -> main`: release promotion using the release PR template.
+- Repositories that use different branch names must update workflow YAML, PR verification, release docs, and this mapping together.
 
-## Export Contract
+## Required Care
 
-- If a repository exports GitHub profiles, keep them derived from the canonical harness docs.
-- Exported files are scaffolds, not the source of truth.
-- Report output, if enabled, belongs under `docs/generated/`.
-
-## Scaffold Files
-
-When write mode is enabled, exporter should write only derived profile scaffolds and a small README explaining that the repository docs remain canonical.
-
-## Platform Caveats
-
-- GitHub.com and IDE integrations may support different profile/frontmatter capabilities.
-- Model and handoff behavior can differ by surface/version.
-- Treat exported profiles as scaffolds; canonical policy remains in `docs/governance/*`.
-
-## Non-Goals
-
-- Enforcing a single platform-specific schema in governance checks.
-- Replacing canonical harness policy docs.
-- Auto-enabling runtime behavior not explicitly configured in the repository.
+- Keep GitHub-specific files derived from canonical docs and scripts.
+- Do not make GitHub the only place a rule exists.
+- If a check fails often for unclear reasons, improve the repository script or documentation rather than weakening branch protection.
+- Do not put secrets or private operational data in PR templates, workflow logs, or public check annotations.
+- CODEOWNERS is a review-routing tool, not a substitute for server-side authorization, tests, or release evidence.

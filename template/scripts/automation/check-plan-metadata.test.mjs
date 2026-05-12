@@ -19,7 +19,7 @@ Status: ready-for-promotion
 - Plan-ID: red-inbox
 - Status: ready-for-promotion
 - Priority: p1
-- Owner: planner
+- Owner: platform
 - Acceptance-Criteria: Inbox is red.
 - Delivery-Class: product
 - Dependencies: none
@@ -46,7 +46,7 @@ ${extraSections}
 `;
 }
 
-test('plans:verify accepts a direct future slice without legacy program metadata', async () => {
+test('plans:verify accepts a direct future slice with supported metadata', async () => {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), 'plans-verify-valid-'));
   await fs.mkdir(path.join(rootDir, 'docs', 'future'), { recursive: true });
   await fs.writeFile(path.join(rootDir, 'docs', 'future', '2026-03-17-red-inbox.md'), validFuturePlan(), 'utf8');
@@ -82,22 +82,18 @@ test('plans:verify accepts dependencies that resolve to completed plans in defau
   assert.match(String(result.stdout), /\[plans:verify\] ok/);
 });
 
-test('plans:verify rejects legacy execution-scope metadata and child sections', async () => {
-  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), 'plans-verify-legacy-'));
+test('plans:verify rejects unsupported metadata fields', async () => {
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), 'plans-verify-unsupported-'));
   await fs.mkdir(path.join(rootDir, 'docs', 'future'), { recursive: true });
   await fs.writeFile(
     path.join(rootDir, 'docs', 'future', '2026-03-17-red-inbox.md'),
-    validFuturePlan(
-      '\n- Execution-Scope: program',
-      '\n## Child Slice Definitions\n\n### child-a\n- draft'
-    ),
+    validFuturePlan('\n- Custom-Scope: broad'),
     'utf8'
   );
 
   const result = runNode(scriptPath, [], rootDir);
   assert.equal(result.status, 1);
-  assert.match(String(result.stderr), /LEGACY_METADATA_FIELD/);
-  assert.match(String(result.stderr), /LEGACY_SECTION/);
+  assert.match(String(result.stderr), /UNSUPPORTED_METADATA_FIELD/);
 });
 
 test('plans:verify accepts budget-exhausted as an active-plan status', async () => {

@@ -1,4 +1,4 @@
-# Automation Outcomes
+# Engineering Outcomes
 
 Status: canonical
 Owner: {{DOC_OWNER}}
@@ -7,56 +7,53 @@ Source of Truth: This document.
 
 ## Purpose
 
-Keep automation value measurable with a compact, repeatable scorecard.
-Use this to confirm that the flat queue stays fast, predictable, and low-noise.
+Keep engineering quality measurable with a compact, repeatable scorecard.
 
 ## Data Sources
 
-- `docs/ops/automation/run-events.jsonl`
-- `run-state.json` in `docs/ops/automation/`
-- `docs/exec-plans/evidence-index/*.md`
-- optional generated outcome reports if the repository enables them
+- completed plans
+- evidence indexes
+- validation summaries
+- PR or change-review summaries when the project uses them
+- incident, bug, or regression records when available
 
 ## Scorecard Metrics
 
-- Time to first worker edit:
-  - Definition: plan start to first worker session that touches repository files.
-  - Output: mean/median seconds across recent runs.
-- Review rate:
-  - Definition: share of completed plans that required a reviewer pass.
-  - Output: count and percentage for medium/high-risk work.
+- Plan quality:
+  - Future slice was decision-complete before promotion.
+  - Must-land checklist mapped to concrete artifacts and validation.
+- Review quality:
+  - Review found bugs, risks, missing tests, or evidence gaps before merge.
+  - High-risk changes received explicit security/reliability scrutiny.
+- Validation quality:
+  - Narrow behavior proof exists for the risky change.
+  - Required fast/full gates passed or gaps were explicitly accepted.
+- Regression rate:
+  - Repeated defects in the same area trigger stronger docs, tests, or checks.
 - Lead time:
-  - Definition: first plan event timestamp to terminal plan event timestamp.
-  - Output: mean/median lead time seconds across plans.
-- Validation reliability:
-  - Definition: counts of passed/failed host and always validation events.
-  - Output: pass/fail totals and failure rate.
-- Rework loops:
-  - Definition: count handoffs, blocked plans, and repeated worker passes.
-  - Output: totals plus sessions-per-completed-plan distribution.
-
-## Report Workflow
-
-1. Run automation (`automation:run`, `automation:resume`, or `automation:grind`).
-2. Inspect `run-events.jsonl`, the latest `run-state.json`, and recent evidence indexes.
-3. Reference the key numbers in plan closure notes or release notes.
+  - Slice size remains small enough for review without losing correctness.
+- Evidence quality:
+  - Completed plans link to compact evidence indexes.
+  - Evidence proves changed behavior rather than only listing commands.
+- Gate maturity:
+  - Required lint, typecheck, test, and build gates are real project commands.
+  - Deferred or not-applicable gates have concrete rationale and owners.
 
 ## Interpretation Guide
 
 - Good signal:
-  - Time-to-first-edit medians trend down for similar risk tiers.
-  - Sessions per completed plan stay low and stable.
-  - Stable lead times for similar risk tiers.
-  - Validation failures trend down over time.
-  - Resume succeeds from the latest checkpoint and handoff without operator confusion.
+  - Plans are small and executable.
+  - Reviews catch concrete issues.
+  - Evidence proves behavior, not only command execution.
+  - Similar defects become tests or checks.
 - Investigation signal:
-  - Time-to-first-edit spikes without corresponding risk increase.
-  - Repeated worker/reviewer loops on the same plan.
-  - Spiking handoff/rework counts.
-  - Repeated validation failures on same plan group.
-  - High event volume with low completion throughput.
+  - Broad plans repeatedly stall.
+  - Validation is mostly generic and does not cover changed behavior.
+  - Docs are updated after the fact instead of with the behavior.
+  - Repeated review comments point to missing canonical rules.
 
 ## Notes
 
 - This scorecard is intentionally lightweight.
-- It is an operational summary, not a replacement for domain-level KPIs.
+- It is an engineering quality summary, not a replacement for product metrics.
+- Use the scorecard to improve rules, tests, docs, and gates; do not use it to reward larger process or broader plans.

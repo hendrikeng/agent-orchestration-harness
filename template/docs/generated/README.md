@@ -9,11 +9,9 @@ Generated artifacts are rebuildable outputs derived from canonical docs, policy 
 
 ## Core Generated Artifacts
 
-- `docs/generated/AGENT-RUNTIME-CONTEXT.md`: compact runtime policy snapshot compiled for orchestrated role sessions.
+- `docs/generated/AGENT-RUNTIME-CONTEXT.md`: compact policy snapshot compiled from governance rules for agent sessions.
 - `docs/generated/article-conformance.json`: conformance summary derived from the repo's article/check rules.
 - `docs/generated/evals-report.json`: agent-hardening evaluation summary.
-- `docs/generated/continuity-evals-report.json`: continuity-specific hardening evaluation summary.
-- `docs/generated/resilience-evals-report.json`: resilience-specific hardening evaluation summary.
 
 ## Optional Repo-Local Generated Artifacts
 
@@ -24,3 +22,7 @@ Generated artifacts are rebuildable outputs derived from canonical docs, policy 
 - Regenerate artifacts from canonical policy, schema, or telemetry sources instead of hand-editing generated outputs.
 - If a generated artifact becomes a routine entrypoint, surface it from `docs/MANIFEST.md` or `docs/README.md`.
 - Remove generated artifacts that are no longer produced by any documented contract or script.
+- Generated artifacts must name their source and generation command when the format supports it.
+- Generated artifacts may contain template placeholders only when the verifier explicitly supports template mode.
+- Do not use generated artifacts as the canonical owner for policy. Fix the source docs or config and regenerate.
+- If generated output changes unexpectedly, inspect the source inputs before committing the generated diff.

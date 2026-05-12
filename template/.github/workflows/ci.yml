@@ -1,0 +1,109 @@
+name: ci
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+      - ready_for_review
+  push:
+    branches:
+      - dev
+      - main
+  merge_group:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "{{NODE_VERSION}}"
+  CI_INSTALL_COMMAND: "{{CI_INSTALL_COMMAND}}"
+  PACKAGE_MANAGER_CACHE: "{{PACKAGE_MANAGER_CACHE}}"
+  PACKAGE_MANAGER_LOCKFILE: "{{PACKAGE_MANAGER_LOCKFILE}}"
+
+jobs:
+  fast-gate:
+    name: Fast Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ env.PACKAGE_MANAGER_CACHE }}
+          cache-dependency-path: ${{ env.PACKAGE_MANAGER_LOCKFILE }}
+
+      - run: ${{ env.CI_INSTALL_COMMAND }}
+      - run: npm run pr:verify
+        if: github.event_name == 'pull_request'
+      - run: npm run plans:verify:closeout
+        env:
+          PLAN_CLOSEOUT_BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
+          PLAN_CLOSEOUT_BRANCH_NAME: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+      - run: npm run verify:fast
+
+  full-gate:
+    name: Full Gate
+    if: >-
+      (github.event_name == 'pull_request' && github.base_ref == 'main') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ env.PACKAGE_MANAGER_CACHE }}
+          cache-dependency-path: ${{ env.PACKAGE_MANAGER_LOCKFILE }}
+
+      - run: ${{ env.CI_INSTALL_COMMAND }}
+      - run: npm run verify:full
+
+  release-candidate-gate:
+    name: Release Candidate Gate
+    if: >-
+      (github.event_name == 'pull_request' && github.base_ref == 'main') ||
+      github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ env.PACKAGE_MANAGER_CACHE }}
+          cache-dependency-path: ${{ env.PACKAGE_MANAGER_LOCKFILE }}
+
+      - run: ${{ env.CI_INSTALL_COMMAND }}
+      - name: Verify release candidate PR
+        if: github.event_name == 'pull_request'
+        run: npm run release:verify
+      - name: Verify release candidate merge queue
+        if: github.event_name == 'merge_group'
+        run: npm run release:verify -- --allow-any-branch

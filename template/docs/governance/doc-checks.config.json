@@ -1,11 +1,8 @@
 {
   "docsIndexPath": "docs/MANIFEST.md",
   "markdownExcludePrefixes": [
-    "docs/ops/automation/runtime/",
-    "docs/ops/automation/handoffs/",
     "docs/exec-plans/active/evidence/",
-    "docs/exec-plans/evidence-index/",
-    "docs/roadmaps/legacy-programs/"
+    "docs/exec-plans/evidence-index/"
   ],
   "scanFiles": [
     "ARCHITECTURE.md",
@@ -52,11 +49,16 @@
     "docs/governance/RULES.md",
     "docs/governance/policy-manifest.json",
     "docs/governance/policy-manifest.schema.json",
+    "docs/governance/project-gates.json",
+    "docs/governance/project-gates.schema.json",
     "docs/governance/doc-checks.config.json",
     "docs/governance/architecture-rules.json",
     "docs/MANIFEST.md",
     "docs/ops/README.md",
+    "docs/ops/api/README.md",
     "docs/ops/automation/README.md",
+    "docs/ops/releases/README.md",
+    "docs/ops/releases/release-mapping.md",
     "docs/product-specs/CURRENT-STATE.md",
     "docs/product-specs/README.md",
     "docs/references/README.md",
@@ -64,11 +66,9 @@
     "docs/ui/INTENTS.md",
     "docs/generated/evals-report.json",
     "docs/agent-hardening/evals.config.json",
-    "docs/ops/automation/ROLE_ORCHESTRATION.md",
     "docs/ops/automation/OUTCOMES.md",
     "docs/ops/automation/INTEROP_GITHUB.md",
-    "docs/ops/automation/LITE_QUICKSTART.md",
-    "docs/ops/automation/PROVIDER_COMPATIBILITY.md"
+    "docs/ops/automation/LITE_QUICKSTART.md"
   ],
   "requiredDirs": [
     "docs/agent-hardening",
@@ -83,7 +83,9 @@
     "docs/generated",
     "docs/governance",
     "docs/ops",
+    "docs/ops/api",
     "docs/ops/automation",
+    "docs/ops/releases",
     "docs/product-specs",
     "docs/references",
     "docs/ui"
@@ -108,7 +110,9 @@
     "docs/generated/",
     "docs/governance/",
     "docs/ops/",
+    "docs/ops/api/",
     "docs/ops/automation/",
+    "docs/ops/releases/",
     "docs/product-specs/",
     "docs/references/",
     "docs/ui/"
@@ -161,18 +165,23 @@
       "docs/ui/README.md"
     ],
     "docs/ops/README.md": [
+      "docs/ops/api/README.md",
       "docs/ops/automation/README.md",
-      "docs/ops/automation/ROLE_ORCHESTRATION.md",
       "docs/ops/automation/LITE_QUICKSTART.md",
       "docs/ops/automation/OUTCOMES.md",
       "docs/ops/automation/INTEROP_GITHUB.md",
-      "docs/ops/automation/PROVIDER_COMPATIBILITY.md"
+      "docs/ops/releases/README.md"
+    ],
+    "docs/ops/releases/README.md": [
+      "docs/ops/releases/release-mapping.md"
     ],
     "docs/governance/README.md": [
       "docs/governance/RULES.md",
       "docs/governance/GOLDEN-PRINCIPLES.md",
       "docs/governance/policy-manifest.json",
       "docs/governance/policy-manifest.schema.json",
+      "docs/governance/project-gates.json",
+      "docs/governance/project-gates.schema.json",
       "docs/governance/doc-checks.config.json",
       "docs/governance/architecture-rules.json"
     ],
@@ -392,11 +401,9 @@
       "docs/product-specs/README.md",
       "docs/references/README.md",
       "docs/ui/INTENTS.md",
-      "docs/ops/automation/ROLE_ORCHESTRATION.md",
       "docs/ops/automation/OUTCOMES.md",
       "docs/ops/automation/INTEROP_GITHUB.md",
-      "docs/ops/automation/LITE_QUICKSTART.md",
-      "docs/ops/automation/PROVIDER_COMPATIBILITY.md"
+      "docs/ops/automation/LITE_QUICKSTART.md"
     ]
   },
   "activePlans": {
@@ -448,6 +455,16 @@
     "currentStatePath": "docs/product-specs/CURRENT-STATE.md",
     "fieldName": "Current State Date"
   },
+  "jsonSchemaValidation": [
+    {
+      "dataPath": "docs/governance/policy-manifest.json",
+      "schemaPath": "docs/governance/policy-manifest.schema.json"
+    },
+    {
+      "dataPath": "docs/governance/project-gates.json",
+      "schemaPath": "docs/governance/project-gates.schema.json"
+    }
+  ],
   "techDebtTracker": {
     "path": "docs/exec-plans/TECH-DEBT-TRACKER.md",
     "activePlanRegex": "Active plan:\\s*`([^`]+)`"

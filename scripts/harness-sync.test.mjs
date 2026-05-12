@@ -22,7 +22,9 @@ test('harness-sync install writes target files and downstream manifest', async (
   assert.equal(result.status, 0);
 
   const readme = await fs.readFile(path.join(targetDir, 'README.md'), 'utf8');
-  assert.match(readme, /This file is intended to become the adopted repository's root `README.md`/);
+  assert.match(readme, /## Product Scope/);
+  assert.match(readme, /## Operating Model/);
+  assert.doesNotMatch(readme, /Agent Kickoff Prompts/);
 
   const manifest = JSON.parse(
     await fs.readFile(path.join(targetDir, 'docs', 'ops', 'automation', 'harness-manifest.json'), 'utf8')
@@ -59,7 +61,9 @@ test('harness-sync update restores managed files when invoked outside the harnes
   assert.equal(result.status, 0);
 
   const readme = await fs.readFile(path.join(targetDir, 'README.md'), 'utf8');
-  assert.match(readme, /This file is intended to become the adopted repository's root `README.md`/);
+  assert.match(readme, /## Product Scope/);
+  assert.match(readme, /## Enforcement and Quality Gates/);
+  assert.doesNotMatch(readme, /Agent Kickoff Prompts/);
 });
 
 test('harness-sync update refuses targets without an existing downstream harness manifest', async () => {
@@ -118,13 +122,13 @@ test('harness-sync drift reports unexpected managed files from the downstream ma
   assert.deepEqual(payload.unexpectedManaged, ['obsolete-managed-file.txt']);
 });
 
-test('harness-sync update removes retired managed files from prior downstream manifests', async () => {
-  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-retired-'));
+test('harness-sync update removes managed files no longer present in the source manifest', async () => {
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-removed-'));
   assert.equal(run(['install', '--target', targetDir]).status, 0);
 
-  const retiredPath = path.join(targetDir, 'docs', 'obsolete-managed-file.txt');
-  await fs.mkdir(path.dirname(retiredPath), { recursive: true });
-  await fs.writeFile(retiredPath, 'stale\n', 'utf8');
+  const removedPath = path.join(targetDir, 'docs', 'obsolete-managed-file.txt');
+  await fs.mkdir(path.dirname(removedPath), { recursive: true });
+  await fs.writeFile(removedPath, 'stale\n', 'utf8');
 
   const manifestPath = path.join(targetDir, 'docs', 'ops', 'automation', 'harness-manifest.json');
   const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
@@ -141,6 +145,31 @@ test('harness-sync update removes retired managed files from prior downstream ma
 
   const payload = JSON.parse(String(result.stdout));
   assert.equal(payload.filesRemoved, 1);
-  await assert.rejects(fs.access(retiredPath));
+  await assert.rejects(fs.access(removedPath));
   assert.equal(run(['drift', '--target', targetDir]).status, 0);
+});
+
+test('harness-sync refuses to install over the blueprint repository root', async () => {
+  const result = run(['install', '--target', repoRoot]);
+  assert.equal(result.status, 1);
+  assert.match(String(result.stderr), /Target must be an adopted repository/);
+});
+
+test('harness-sync rejects downstream manifest paths that escape the target repo', async () => {
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-escape-'));
+  assert.equal(run(['install', '--target', targetDir]).status, 0);
+
+  const manifestPath = path.join(targetDir, 'docs', 'ops', 'automation', 'harness-manifest.json');
+  const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  manifest.managedFiles.push({
+    targetPath: '../outside.txt',
+    sourcePath: 'template/outside.txt',
+    sha256: 'stale',
+    size: 0
+  });
+  await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+
+  const result = run(['update', '--target', targetDir]);
+  assert.equal(result.status, 1);
+  assert.match(String(result.stderr), /repository-relative path/);
 });

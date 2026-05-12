@@ -73,7 +73,7 @@ Set `Status: ready-for-promotion` only when these checks pass:
 For high-risk multi-phase programs:
 
 - All phase files should be coverage-complete before implementation starts.
-- Coverage-complete means scope, non-goals, dependencies, validation, risks, and handoff boundaries are explicit enough that nothing major is left floating.
+- Coverage-complete means scope, non-goals, dependencies, validation, risks, and ownership boundaries are explicit enough that nothing major is left floating.
 - Only the next one or two phases should be fully decision-complete and promotion-ready.
 - Later phases may stay lighter where implementation detail should wait for earlier learnings.
 - Do not compensate for uncertainty by making every future file huge; add detail where it removes real execution ambiguity.
@@ -92,3 +92,13 @@ Use one future file per executable slice.
 - If the user describes a broader effort, create multiple future slices and link them with `Dependencies`.
 - Use a plain roadmap or notes document for grouping if needed, but do not put grouping documents into the execution queue.
 - For high-risk architecture programs, define the full phase set first, then deepen the next executable phases before promotion.
+
+## Planning Quality Rules
+
+- Future files should remove execution ambiguity, not accumulate speculative design.
+- A future slice must name the files, modules, docs, or tests likely to change when those are knowable.
+- Avoid target-state language that implies unshipped behavior is already true.
+- Put open decisions in the plan instead of hiding them in chat or comments.
+- Keep assumptions explicit and falsifiable.
+- Do not promote a slice whose validation path is unknown.
+- When implementation reveals new scope, create or update a follow-up future slice rather than stretching the active plan.

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/agent-project-blueprint/project-gates.schema.json",
+  "title": "Project Gates",
+  "type": "object",
+  "required": ["version", "profiles", "gates"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 8
+    },
+    "profiles": {
+      "type": "object",
+      "required": ["fast", "full", "release", "deploy"],
+      "properties": {
+        "fast": { "type": "string", "minLength": 8 },
+        "full": { "type": "string", "minLength": 8 },
+        "release": { "type": "string", "minLength": 8 },
+        "deploy": { "type": "string", "minLength": 8 }
+      },
+      "additionalProperties": false
+    },
+    "gates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "profile", "status", "command", "rationale"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "profile": {
+            "type": "string",
+            "enum": ["fast", "full", "release", "deploy"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["required", "deferred", "not-applicable"]
+          },
+          "command": {
+            "type": "string"
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 16
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "description": "Project-specific quality gates. Replace placeholder commands during bootstrap or mark gates not-applicable/deferred with a concrete rationale.",
+  "profiles": {
+    "fast": "Runs on every implementation PR and during normal agent iteration.",
+    "full": "Runs before merge/release candidates and after verify:fast.",
+    "release": "Runs for release candidates when release support is enabled.",
+    "deploy": "Runs against a deployed target when deployment verification is available."
+  },
+  "gates": [
+    {
+      "id": "lint",
+      "profile": "fast",
+      "status": "required",
+      "command": "{{PROJECT_LINT_COMMAND}}",
+      "rationale": "Prevent new syntax, style, unused-code, and static-analysis debt."
+    },
+    {
+      "id": "typecheck",
+      "profile": "fast",
+      "status": "required",
+      "command": "{{PROJECT_TYPECHECK_COMMAND}}",
+      "rationale": "Prove typed contracts across changed code."
+    },
+    {
+      "id": "unit-tests",
+      "profile": "fast",
+      "status": "required",
+      "command": "{{PROJECT_UNIT_TEST_COMMAND}}",
+      "rationale": "Protect focused behavior and regression coverage."
+    },
+    {
+      "id": "build",
+      "profile": "full",
+      "status": "required",
+      "command": "{{PROJECT_BUILD_COMMAND}}",
+      "rationale": "Prove the production artifact can compile/package."
+    },
+    {
+      "id": "integration-tests",
+      "profile": "full",
+      "status": "deferred",
+      "command": "",
+      "rationale": "Replace with the project integration/API test command once an integration harness exists."
+    },
+    {
+      "id": "migration-integrity",
+      "profile": "full",
+      "status": "not-applicable",
+      "command": "",
+      "rationale": "No database migration surface has been adopted yet."
+    },
+    {
+      "id": "browser-smoke",
+      "profile": "full",
+      "status": "not-applicable",
+      "command": "",
+      "rationale": "No browser-run frontend surface has been adopted yet."
+    },
+    {
+      "id": "security-audit",
+      "profile": "full",
+      "status": "deferred",
+      "command": "",
+      "rationale": "Replace with the project dependency/static security audit command once dependencies are installed."
+    },
+    {
+      "id": "release-verify",
+      "profile": "release",
+      "status": "required",
+      "command": "npm run release:verify",
+      "rationale": "Verify release completeness, evidence, and mapping before release promotion."
+    },
+    {
+      "id": "deploy-verify",
+      "profile": "deploy",
+      "status": "deferred",
+      "command": "",
+      "rationale": "Replace with the project deployment health check once a deployment target exists."
+    }
+  ]
+}

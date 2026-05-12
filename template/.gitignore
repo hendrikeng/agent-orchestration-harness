@@ -1,7 +1,46 @@
-# automation runtime artifacts (transient)
-/docs/ops/automation/run-state.json
-/docs/ops/automation/run-events.jsonl
-/docs/ops/automation/runtime/*
-!/docs/ops/automation/runtime/.gitkeep
-/docs/ops/automation/handoffs/*
-!/docs/ops/automation/handoffs/.gitkeep
+# dependencies
+node_modules/
+
+# build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+.turbo/
+.nx/
+
+# test and coverage outputs
+coverage/
+test-results/
+playwright-report/
+.nyc_output/
+
+# local caches
+.cache/
+.parcel-cache/
+.eslintcache
+*.tsbuildinfo
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# local environment
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# operating system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

@@ -15,5 +15,4 @@ test('verify-full dry-run expands to fast plus merge-level checks', async () => 
   assert.match(stdout, /check-dependencies/);
   assert.match(stdout, /check-agent-hardening/);
   assert.match(stdout, /check-evals/);
-  assert.doesNotMatch(stdout, /verify-orchestration-state/);
 });

@@ -5,30 +5,11 @@ import path from 'node:path';
 
 import { createTemplateRepo, runNode } from './test-helpers.mjs';
 
-test('harness:verify fails when package.json keeps a retired harness script', async () => {
+test('harness:verify fails when a required package script drifts', async () => {
   const rootDir = await createTemplateRepo();
   const packageJsonPath = path.join(rootDir, 'package.json');
   const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
-  packageJson.scripts['automation:run:parallel'] =
-    'node ./scripts/automation/orchestrator.mjs run-parallel';
-  await fs.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
-
-  const result = runNode(
-    path.join(rootDir, 'scripts', 'automation', 'check-harness-alignment.mjs'),
-    [],
-    rootDir
-  );
-
-  assert.equal(result.status, 1);
-  assert.match(String(result.stderr), /RETIRED_SCRIPT/);
-  assert.match(String(result.stderr), /package\.json/);
-});
-
-test('harness:verify fails when package.json drifts from the managed harness fragment', async () => {
-  const rootDir = await createTemplateRepo();
-  const packageJsonPath = path.join(rootDir, 'package.json');
-  const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
-  packageJson.scripts['automation:grind'] = 'node ./scripts/automation/orchestrator.mjs run';
+  packageJson.scripts['verify:fast'] = 'node ./scripts/docs/check-governance.mjs';
   await fs.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
 
   const result = runNode(
@@ -39,15 +20,18 @@ test('harness:verify fails when package.json drifts from the managed harness fra
 
   assert.equal(result.status, 1);
   assert.match(String(result.stderr), /SCRIPT_MISMATCH/);
-  assert.match(String(result.stderr), /automation:grind/);
+  assert.match(String(result.stderr), /verify:fast/);
 });
 
-test('harness:verify fails when canonical docs reference retired harness commands', async () => {
+test('harness:verify fails when required quality guidance is missing', async () => {
   const rootDir = await createTemplateRepo();
-  const plansPath = path.join(rootDir, 'docs', 'PLANS.md');
-  const plansDoc = await fs.readFile(plansPath, 'utf8');
-  const drifted = `${plansDoc}\nLegacy fallback: \`automation:run:parallel\`.\n`;
-  await fs.writeFile(plansPath, drifted, 'utf8');
+  const qualityPath = path.join(rootDir, 'docs', 'QUALITY_SCORE.md');
+  const qualityDoc = await fs.readFile(qualityPath, 'utf8');
+  await fs.writeFile(
+    qualityPath,
+    qualityDoc.replace('A slice is high quality only when it clears all applicable gates', 'A slice is high quality when evidence is strong'),
+    'utf8'
+  );
 
   const result = runNode(
     path.join(rootDir, 'scripts', 'automation', 'check-harness-alignment.mjs'),
@@ -56,17 +40,16 @@ test('harness:verify fails when canonical docs reference retired harness command
   );
 
   assert.equal(result.status, 1);
-  assert.match(String(result.stderr), /RETIRED_DOC_REFERENCE/);
-  assert.match(String(result.stderr), /docs\/PLANS\.md/);
+  assert.match(String(result.stderr), /MISSING_QUALITY_GUIDANCE/);
+  assert.match(String(result.stderr), /docs\/QUALITY_SCORE\.md/);
 });
 
-test('harness:verify fails when codex executor command omits role sandbox wiring', async () => {
+test('harness:verify fails when policy execution mode drifts', async () => {
   const rootDir = await createTemplateRepo();
-  const configPath = path.join(rootDir, 'docs', 'ops', 'automation', 'orchestrator.config.json');
-  const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
-  config.executor.command =
-    'codex -a never exec --json --full-auto -c model_reasoning_effort={reasoning_effort} -m {model} {prompt}';
-  await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
+  const policyPath = path.join(rootDir, 'docs', 'governance', 'policy-manifest.json');
+  const policy = JSON.parse(await fs.readFile(policyPath, 'utf8'));
+  policy.executionModel.mode = 'custom-local-process';
+  await fs.writeFile(policyPath, `${JSON.stringify(policy, null, 2)}\n`, 'utf8');
 
   const result = runNode(
     path.join(rootDir, 'scripts', 'automation', 'check-harness-alignment.mjs'),
@@ -75,25 +58,5 @@ test('harness:verify fails when codex executor command omits role sandbox wiring
   );
 
   assert.equal(result.status, 1);
-  assert.match(String(result.stderr), /MISSING_SANDBOX_PLACEHOLDER/);
-  assert.match(String(result.stderr), /MISSING_SANDBOX_FLAG/);
-  assert.match(String(result.stderr), /INVALID_CODEX_FULL_AUTO/);
-});
-
-test('harness:verify fails when codex approval flag is placed after exec', async () => {
-  const rootDir = await createTemplateRepo();
-  const configPath = path.join(rootDir, 'docs', 'ops', 'automation', 'orchestrator.config.json');
-  const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
-  config.executor.command =
-    'codex exec --json -a never --sandbox {sandbox_mode} -c model_reasoning_effort={reasoning_effort} -m {model} {prompt}';
-  await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
-
-  const result = runNode(
-    path.join(rootDir, 'scripts', 'automation', 'check-harness-alignment.mjs'),
-    [],
-    rootDir
-  );
-
-  assert.equal(result.status, 1);
-  assert.match(String(result.stderr), /MISPLACED_APPROVAL_FLAG/);
+  assert.match(String(result.stderr), /INVALID_EXECUTION_MODEL/);
 });

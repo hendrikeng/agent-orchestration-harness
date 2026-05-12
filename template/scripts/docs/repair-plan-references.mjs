@@ -13,9 +13,6 @@ const LINK_REGEX = /\[[^\]]*\]\(([^)]+)\)/g;
 const INLINE_CODE_REGEX = /`([^`]+)`/g;
 const DIRECT_PLAN_PATH_REGEX = /^docs\/exec-plans\/(?:active|completed)\/[^/]+\.md$/;
 const FUTURE_PLAN_PATH_REGEX = /^docs\/future\/[^/]+\.md$/;
-const RUNTIME_CONTACT_PATH_REGEX = /^docs\/ops\/automation\/runtime\/contacts\/run-[^/]+\/.+\.md$/;
-const RUNTIME_ARTIFACT_PATH_REGEX = /^docs\/ops\/automation\/runtime\/run-[^/]+\/.+$/;
-const RUNTIME_CONTACT_FALLBACK_PATH = 'docs/ops/automation/README.md';
 
 function toPosix(value) {
   return String(value ?? '').replace(/\\/g, '/');
@@ -152,14 +149,14 @@ function inferPlanIdFromReferencePath(planPath) {
 }
 
 function classifyRepairableReference(normalizedRef) {
+  if (/[*<>]/.test(normalizedRef)) {
+    return null;
+  }
+  if (path.posix.basename(normalizedRef).toLowerCase() === 'readme.md') {
+    return null;
+  }
   if (DIRECT_PLAN_PATH_REGEX.test(normalizedRef) || FUTURE_PLAN_PATH_REGEX.test(normalizedRef)) {
     return 'plan';
-  }
-  if (RUNTIME_CONTACT_PATH_REGEX.test(normalizedRef)) {
-    return 'runtime-contact';
-  }
-  if (RUNTIME_ARTIFACT_PATH_REGEX.test(normalizedRef)) {
-    return 'runtime-artifact';
   }
   return null;
 }
@@ -168,53 +165,8 @@ async function loadPlanCatalog(rootDir) {
   const activeDir = path.join(rootDir, 'docs/exec-plans/active');
   const completedDir = path.join(rootDir, 'docs/exec-plans/completed');
   const futureDir = path.join(rootDir, 'docs/future');
-  const legacyRoadmapsDir = path.join(rootDir, 'docs/roadmaps/legacy-programs');
   const planById = new Map();
   const existingPaths = new Set();
-
-  async function readPlanTree(directoryAbs, phase) {
-    const results = [];
-
-    async function walk(currentDir) {
-      let entries = [];
-      try {
-        entries = await fs.readdir(currentDir, { withFileTypes: true });
-      } catch {
-        return;
-      }
-
-      for (const entry of entries) {
-        const abs = path.join(currentDir, entry.name);
-        if (entry.isDirectory()) {
-          await walk(abs);
-          continue;
-        }
-        if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.md') || entry.name.toLowerCase() === 'readme.md') {
-          continue;
-        }
-
-        const rel = toPosix(path.relative(rootDir, abs));
-        existingPaths.add(rel);
-        const content = await fs.readFile(abs, 'utf8');
-        const metadata = parseMetadata(content);
-        const parsedPlanId = parsePlanId(metadataValue(metadata, 'Plan-ID'), null) ?? inferPlanId(content, abs);
-        if (!parsedPlanId) {
-          continue;
-        }
-
-        const stat = await fs.stat(abs);
-        results.push({
-          phase,
-          planId: parsedPlanId,
-          relPath: rel,
-          mtimeMs: stat.mtimeMs
-        });
-      }
-    }
-
-    await walk(directoryAbs);
-    return results;
-  }
 
   async function readPlanDirectory(directoryAbs, phase) {
     let entries = [];
@@ -254,11 +206,10 @@ async function loadPlanCatalog(rootDir) {
   const active = await readPlanDirectory(activeDir, 'active');
   const completed = await readPlanDirectory(completedDir, 'completed');
   const future = await readPlanDirectory(futureDir, 'future');
-  const legacy = await readPlanTree(legacyRoadmapsDir, 'legacy');
-  const all = [...active, ...completed, ...future, ...legacy];
+  const all = [...active, ...completed, ...future];
   all.sort((a, b) => {
     if (a.phase !== b.phase) {
-      const phasePriority = { active: 0, completed: 1, future: 2, legacy: 3 };
+      const phasePriority = { active: 0, completed: 1, future: 2 };
       return (phasePriority[a.phase] ?? 99) - (phasePriority[b.phase] ?? 99);
     }
     if (a.mtimeMs !== b.mtimeMs) {
@@ -305,8 +256,6 @@ function collectReferenceTokens(content, sourceFile) {
 function applyRewrites(content, rewrites) {
   let replacements = 0;
   let planReplacements = 0;
-  let runtimeContactReplacements = 0;
-  let runtimeArtifactReplacements = 0;
   let updated = content.replace(LINK_REGEX, (fullMatch, rawRef) => {
     const rewrite = rewrites.get(rawRef);
     if (!rewrite || rewrite.target === rawRef) {
@@ -315,10 +264,6 @@ function applyRewrites(content, rewrites) {
     replacements += 1;
     if (rewrite.kind === 'plan') {
       planReplacements += 1;
-    } else if (rewrite.kind === 'runtime-contact') {
-      runtimeContactReplacements += 1;
-    } else if (rewrite.kind === 'runtime-artifact') {
-      runtimeArtifactReplacements += 1;
     }
     return fullMatch.replace(`(${rawRef})`, `(${rewrite.target})`);
   });
@@ -331,10 +276,6 @@ function applyRewrites(content, rewrites) {
     replacements += 1;
     if (rewrite.kind === 'plan') {
       planReplacements += 1;
-    } else if (rewrite.kind === 'runtime-contact') {
-      runtimeContactReplacements += 1;
-    } else if (rewrite.kind === 'runtime-artifact') {
-      runtimeArtifactReplacements += 1;
     }
     return `\`${rewrite.target}\``;
   });
@@ -342,9 +283,7 @@ function applyRewrites(content, rewrites) {
   return {
     content: updated,
     replacements,
-    planReplacements,
-    runtimeContactReplacements,
-    runtimeArtifactReplacements
+    planReplacements
   };
 }
 
@@ -366,27 +305,10 @@ async function main() {
   const markdownFiles = [...new Set([...existingRootMarkdown, ...docsMarkdown])];
 
   let staleRefsFound = 0;
-  let staleRuntimeContactRefsFound = 0;
-  let staleRuntimeArtifactRefsFound = 0;
   let refsRepaired = 0;
   let planRefsRepaired = 0;
-  let runtimeContactRefsRepaired = 0;
-  let runtimeArtifactRefsRepaired = 0;
   let unresolvedRefs = 0;
-  let unresolvedRuntimeContactRefs = 0;
-  let unresolvedRuntimeArtifactRefs = 0;
   let filesUpdated = 0;
-  const refExistsCache = new Map();
-  const runtimeContactFallbackExists = await exists(path.join(rootDir, RUNTIME_CONTACT_FALLBACK_PATH));
-
-  async function refExistsInRepo(normalizedRef) {
-    if (refExistsCache.has(normalizedRef)) {
-      return refExistsCache.get(normalizedRef);
-    }
-    const result = await exists(path.join(rootDir, normalizedRef));
-    refExistsCache.set(normalizedRef, result);
-    return result;
-  }
 
   for (const filePath of markdownFiles) {
     const fileRel = toPosix(path.relative(rootDir, filePath));
@@ -400,38 +322,18 @@ async function main() {
     for (const ref of refs) {
       let targetRef = null;
 
-      if (ref.kind === 'plan') {
-        if (existingPaths.has(ref.normalized)) {
-          continue;
-        }
+      if (ref.kind !== 'plan') {
+        continue;
+      }
+      if (existingPaths.has(ref.normalized)) {
+        continue;
+      }
 
-        staleRefsFound += 1;
-        const planId = inferPlanIdFromReferencePath(ref.normalized);
-        targetRef = planId ? planById.get(planId) : null;
-        if (!targetRef || targetRef === ref.normalized) {
-          unresolvedRefs += 1;
-          continue;
-        }
-      } else if (ref.kind === 'runtime-contact' || ref.kind === 'runtime-artifact') {
-        if (await refExistsInRepo(ref.normalized)) {
-          continue;
-        }
-
-        if (ref.kind === 'runtime-contact') {
-          staleRuntimeContactRefsFound += 1;
-        } else {
-          staleRuntimeArtifactRefsFound += 1;
-        }
-        if (!runtimeContactFallbackExists) {
-          if (ref.kind === 'runtime-contact') {
-            unresolvedRuntimeContactRefs += 1;
-          } else {
-            unresolvedRuntimeArtifactRefs += 1;
-          }
-          continue;
-        }
-        targetRef = RUNTIME_CONTACT_FALLBACK_PATH;
-      } else {
+      staleRefsFound += 1;
+      const planId = inferPlanIdFromReferencePath(ref.normalized);
+      targetRef = planId ? planById.get(planId) : null;
+      if (!targetRef || targetRef === ref.normalized) {
+        unresolvedRefs += 1;
         continue;
       }
 
@@ -449,8 +351,6 @@ async function main() {
     const updated = result.content;
     refsRepaired += result.replacements;
     planRefsRepaired += result.planReplacements;
-    runtimeContactRefsRepaired += result.runtimeContactReplacements;
-    runtimeArtifactRefsRepaired += result.runtimeArtifactReplacements;
 
     if (updated !== original) {
       filesUpdated += 1;
@@ -462,15 +362,9 @@ async function main() {
 
   console.log('[plan-ref-repair] scanned markdown files:', markdownFiles.length);
   console.log('[plan-ref-repair] stale plan refs found:', staleRefsFound);
-  console.log('[plan-ref-repair] stale runtime contact refs found:', staleRuntimeContactRefsFound);
-  console.log('[plan-ref-repair] stale runtime artifact refs found:', staleRuntimeArtifactRefsFound);
   console.log('[plan-ref-repair] stale plan refs repaired:', planRefsRepaired);
-  console.log('[plan-ref-repair] stale runtime contact refs repaired:', runtimeContactRefsRepaired);
-  console.log('[plan-ref-repair] stale runtime artifact refs repaired:', runtimeArtifactRefsRepaired);
   console.log('[plan-ref-repair] stale refs repaired total:', refsRepaired);
   console.log('[plan-ref-repair] unresolved stale refs:', unresolvedRefs);
-  console.log('[plan-ref-repair] unresolved stale runtime contact refs:', unresolvedRuntimeContactRefs);
-  console.log('[plan-ref-repair] unresolved stale runtime artifact refs:', unresolvedRuntimeArtifactRefs);
   console.log('[plan-ref-repair] files updated:', filesUpdated);
   if (options.dryRun) {
     console.log('[plan-ref-repair] dry-run mode; no files were written.');

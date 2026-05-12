@@ -20,9 +20,10 @@ Source of Truth: This document and `docs/architecture/`.
 - Dependency flow must remain directional and enforceable.
 - Shared contracts/types are canonical interfaces.
 - Sensitive-domain authority remains server-side for `{{SERVER_AUTHORITY_BOUNDARY_SET}}`.
-- Runtime surfaces and transitional entrypoints must stay explicit in `docs/architecture/TOPOLOGY.md`.
-- Architecture rules must map to actual module tags and import behavior.
-- Agent runs must preserve explicit observability and tool-approval boundaries.
+- Application entrypoints, jobs, scripts, integrations, and transitional paths must stay explicit in `docs/architecture/TOPOLOGY.md`.
+- Architecture rules must map to actual module tags, import behavior, and project gate checks.
+- Engineering sessions must preserve explicit observability, evidence, and tool-approval boundaries.
+- Boundary exceptions need an owner, rationale, expiry or revisit trigger, and validation evidence.
 
 ## Verification
 

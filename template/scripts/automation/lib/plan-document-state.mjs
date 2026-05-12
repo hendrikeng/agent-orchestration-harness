@@ -6,7 +6,7 @@ import {
   parseMetadata,
   setMetadataFields
 } from './plan-metadata.mjs';
-import { escapeRegex, resolveSafeRepoPath } from './orchestrator-shared.mjs';
+import { escapeRegex, resolveSafeRepoPath } from './repo-paths.mjs';
 
 export const MUST_LAND_SECTION = 'Must-Land Checklist';
 

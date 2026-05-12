@@ -1,6 +1,8 @@
-# Placeholder Contract
+# Bootstrap Placeholder Contract
 
-Replace all `{{...}}` tokens in this template before first merge.
+Replace all `{{...}}` tokens after installing the blueprint into a repository and before the first merge.
+
+The goal is not to fill blanks mechanically. Each replacement should make the adopted repository's product scope, architecture, quality gates, ownership, and risk boundaries explicit enough for future humans and agents to trust.
 
 ## Required Core Placeholders
 
@@ -41,7 +43,15 @@ Replace all `{{...}}` tokens in this template before first merge.
 
 ## Governance/Architecture Rule Placeholders
 
+- `{{NODE_VERSION}}`
+- `{{CI_INSTALL_COMMAND}}`
+- `{{PACKAGE_MANAGER_CACHE}}`
+- `{{PACKAGE_MANAGER_LOCKFILE}}`
 - `{{ESLINT_CONFIG_PATH}}`
+- `{{PROJECT_LINT_COMMAND}}`
+- `{{PROJECT_TYPECHECK_COMMAND}}`
+- `{{PROJECT_UNIT_TEST_COMMAND}}`
+- `{{PROJECT_BUILD_COMMAND}}`
 - `{{SOURCE_TAG_1}}`, `{{SOURCE_TAG_2}}`
 - `{{ALLOWED_TARGET_TAG_1A}}`, `{{ALLOWED_TARGET_TAG_1B}}`
 - `{{ALLOWED_TARGET_TAG_2A}}`, `{{ALLOWED_TARGET_TAG_2B}}`
@@ -80,6 +90,10 @@ If a domain does not use billing/credits/payments, keep the placeholder explicit
 
 - `{{CODEOWNERS_DEFAULT_TEAM}}`: `@your-org/platform-engineering`
 - `{{CODEOWNERS_SECURITY_TEAM}}`: `@your-org/security-ops`
+- `{{NODE_VERSION}}`: `24`
+- `{{CI_INSTALL_COMMAND}}`: `npm ci`, `pnpm install --frozen-lockfile`, or `yarn install --immutable`
+- `{{PACKAGE_MANAGER_CACHE}}`: `npm`, `pnpm`, or `yarn`
+- `{{PACKAGE_MANAGER_LOCKFILE}}`: `package-lock.json`, `pnpm-lock.yaml`, or `yarn.lock`
 
 ## Validation Command
 
@@ -87,4 +101,10 @@ Run this command in the initialized repository; result must be empty:
 
 ```bash
 ./scripts/check-template-placeholders.sh
+```
+
+Then run:
+
+```bash
+./scripts/bootstrap-verify.sh
 ```

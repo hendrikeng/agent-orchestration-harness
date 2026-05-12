@@ -2,7 +2,7 @@
 
 Status: canonical
 Owner: {{DOC_OWNER}}
-Last Updated: 2026-03-04
+Last Updated: {{LAST_UPDATED_ISO_DATE}}
 Source of Truth: This directory.
 
 Place currently executing plans in this directory.
@@ -35,3 +35,12 @@ Active plan intent rules:
 
 - Keep current evidence in `docs/exec-plans/active/evidence/README.md` and plan-specific files in the same directory.
 - Retain only recent, decision-relevant sessions in active evidence; move older detail to `*-session-archive.md` files.
+
+## Execution Rules
+
+- Do not start implementation from an active plan whose metadata, acceptance criteria, or must-land checklist is incomplete.
+- Keep `Status` truthful during execution; use `blocked` when external input is required and `budget-exhausted` when continuation needs a fresh session.
+- Medium and high risk plans need review scrutiny before completion.
+- Security-sensitive plans must not proceed past the approval point while `Security-Approval: pending`.
+- Update the active plan when scope changes; if the change no longer fits one slice, split follow-up work rather than expanding the active plan indefinitely.
+- Close plans promptly after validation. Active plans are working contracts, not historical archives.

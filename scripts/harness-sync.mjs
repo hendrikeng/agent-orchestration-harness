@@ -55,6 +55,34 @@ function toPosix(value) {
   return String(value ?? '').replaceAll('\\', '/');
 }
 
+function isWithinDirectory(baseDir, candidatePath) {
+  const relative = path.relative(path.resolve(baseDir), path.resolve(candidatePath));
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function assertWithinDirectory(baseDir, candidatePath, label) {
+  if (!isWithinDirectory(baseDir, candidatePath)) {
+    throw new Error(`${label} escapes target directory: ${toPosix(candidatePath)}`);
+  }
+}
+
+function assertSafeRelativePath(relativePath, label) {
+  const raw = String(relativePath ?? '').trim();
+  const normalized = normalizePattern(raw);
+  if (
+    !normalized ||
+    normalized === '.' ||
+    path.isAbsolute(raw) ||
+    path.win32.isAbsolute(raw) ||
+    path.isAbsolute(normalized) ||
+    path.win32.isAbsolute(normalized) ||
+    normalized.split('/').includes('..')
+  ) {
+    throw new Error(`${label} must be a non-empty repository-relative path: ${String(relativePath)}`);
+  }
+  return normalized;
+}
+
 async function readJson(filePath) {
   const raw = await fs.readFile(filePath, 'utf8');
   return JSON.parse(raw);
@@ -156,6 +184,7 @@ function gitHeadRevision() {
 async function collectSourceFiles(manifest) {
   const sourceRoot = path.join(rootDir, manifest.sourceRoot);
   const targetRoot = String(manifest.targetRoot ?? '.').trim() || '.';
+  assertWithinDirectory(rootDir, sourceRoot, 'sourceRoot');
   const files = await walkFiles(sourceRoot);
   const entries = [];
   for (const absPath of files) {
@@ -167,9 +196,10 @@ async function collectSourceFiles(manifest) {
       continue;
     }
     const stat = await fs.stat(absPath);
+    const targetPath = assertSafeRelativePath(path.join(targetRoot, relFromSource), 'managed targetPath');
     entries.push({
       sourcePath: toPosix(path.relative(rootDir, absPath)),
-      targetPath: toPosix(path.join(targetRoot, relFromSource)),
+      targetPath: toPosix(targetPath),
       sha256: await sha256(absPath),
       size: stat.size
     });
@@ -178,7 +208,10 @@ async function collectSourceFiles(manifest) {
 }
 
 function downstreamManifestRel(manifest) {
-  return String(manifest?.downstreamManifestPath ?? defaultDownstreamManifestRel).trim() || defaultDownstreamManifestRel;
+  return assertSafeRelativePath(
+    String(manifest?.downstreamManifestPath ?? defaultDownstreamManifestRel).trim() || defaultDownstreamManifestRel,
+    'downstreamManifestPath'
+  );
 }
 
 async function loadDownstreamManifest(targetDir, manifest) {
@@ -278,6 +311,7 @@ async function compareTarget(targetDir, sourceEntries, installedManifest = null)
   for (const entry of sourceEntries) {
     managedSet.add(entry.targetPath);
     const targetPath = path.join(targetDir, entry.targetPath);
+    assertWithinDirectory(targetDir, targetPath, `managed file '${entry.targetPath}'`);
     try {
       const targetHash = await sha256(targetPath);
       if (targetHash !== entry.sha256) {
@@ -294,6 +328,7 @@ async function compareTarget(targetDir, sourceEntries, installedManifest = null)
     if (!targetPath || managedSet.has(targetPath)) {
       continue;
     }
+    assertSafeRelativePath(targetPath, 'installed managed targetPath');
     unexpectedManaged.push(targetPath);
   }
 
@@ -339,11 +374,12 @@ async function removeRetiredManagedFiles(targetDir, sourceEntries, installedMani
   const currentManaged = new Set(sourceEntries.map((entry) => entry.targetPath));
   const removed = [];
   for (const entry of installedManifest?.managedFiles ?? []) {
-    const targetPathRel = toPosix(String(entry?.targetPath ?? '').trim());
+    const targetPathRel = assertSafeRelativePath(String(entry?.targetPath ?? '').trim(), 'installed managed targetPath');
     if (!targetPathRel || currentManaged.has(targetPathRel)) {
       continue;
     }
     const targetPathAbs = path.join(targetDir, targetPathRel);
+    assertWithinDirectory(targetDir, targetPathAbs, `retired managed file '${targetPathRel}'`);
     await fs.rm(targetPathAbs, { force: true }).catch(() => {});
     await pruneEmptyDirectories(targetDir, path.dirname(targetPathAbs));
     removed.push(targetPathRel);
@@ -357,6 +393,8 @@ async function installOrUpdate(targetDir, manifest, sourceEntries, installedMani
   for (const entry of sourceEntries) {
     const sourcePath = path.join(rootDir, entry.sourcePath);
     const targetPath = path.join(targetDir, entry.targetPath);
+    assertWithinDirectory(rootDir, sourcePath, `source file '${entry.sourcePath}'`);
+    assertWithinDirectory(targetDir, targetPath, `target file '${entry.targetPath}'`);
     await fs.mkdir(path.dirname(targetPath), { recursive: true });
     await fs.copyFile(sourcePath, targetPath);
     copied.push(entry.targetPath);
@@ -379,6 +417,9 @@ async function main() {
   }
 
   const targetDir = path.resolve(targetDirRaw);
+  if (targetDir === rootDir || isWithinDirectory(path.join(rootDir, 'template'), targetDir)) {
+    throw new Error('Target must be an adopted repository, not the blueprint root or template directory.');
+  }
   const jsonOutput = asBoolean(options.json, false);
   const sourceManifest = await readJson(sourceManifestPath);
   const sourceEntries = await collectSourceFiles(sourceManifest);

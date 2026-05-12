@@ -162,6 +162,113 @@ function isWithinRoot(rootDir, absPath) {
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
+function resolveConfigPath(rootDir, relPath, errors, code, label) {
+  const normalized = toPosix(String(relPath ?? '').trim()).replace(/^\/+/, '');
+  const abs = path.resolve(rootDir, normalized);
+  if (!normalized || !isWithinRoot(rootDir, abs)) {
+    errors.push(makeFinding('error', code, `${label} escapes repository root: ${String(relPath)}`, String(relPath)));
+    return null;
+  }
+  return { rel: normalized, abs };
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function schemaTypeMatches(value, type) {
+  if (type === 'object') return isPlainObject(value);
+  if (type === 'array') return Array.isArray(value);
+  if (type === 'integer') return Number.isInteger(value);
+  if (type === 'number') return typeof value === 'number' && Number.isFinite(value);
+  if (type === 'string') return typeof value === 'string';
+  if (type === 'boolean') return typeof value === 'boolean';
+  return true;
+}
+
+function validateJsonSchemaSubset(value, schema, pathLabel = '$') {
+  const findings = [];
+
+  function visit(currentValue, currentSchema, currentPath) {
+    if (!isPlainObject(currentSchema)) {
+      return;
+    }
+
+    const type = currentSchema.type;
+    if (type && !schemaTypeMatches(currentValue, type)) {
+      findings.push(`${currentPath} must be ${type}.`);
+      return;
+    }
+
+    if (Array.isArray(currentSchema.enum) && !currentSchema.enum.includes(currentValue)) {
+      findings.push(`${currentPath} must be one of: ${currentSchema.enum.join(', ')}.`);
+    }
+
+    if (typeof currentValue === 'string') {
+      if (Number.isInteger(currentSchema.minLength) && currentValue.length < currentSchema.minLength) {
+        findings.push(`${currentPath} must be at least ${currentSchema.minLength} characters.`);
+      }
+      if (currentSchema.pattern) {
+        const regex = new RegExp(currentSchema.pattern);
+        if (!regex.test(currentValue)) {
+          findings.push(`${currentPath} must match pattern ${currentSchema.pattern}.`);
+        }
+      }
+    }
+
+    if (Number.isInteger(currentSchema.minimum) && typeof currentValue === 'number' && currentValue < currentSchema.minimum) {
+      findings.push(`${currentPath} must be >= ${currentSchema.minimum}.`);
+    }
+
+    if (Array.isArray(currentValue)) {
+      if (Number.isInteger(currentSchema.minItems) && currentValue.length < currentSchema.minItems) {
+        findings.push(`${currentPath} must contain at least ${currentSchema.minItems} item(s).`);
+      }
+      if (currentSchema.items) {
+        currentValue.forEach((item, index) => visit(item, currentSchema.items, `${currentPath}[${index}]`));
+      }
+    }
+
+    if (isPlainObject(currentValue)) {
+      const required = Array.isArray(currentSchema.required) ? currentSchema.required : [];
+      for (const key of required) {
+        if (!Object.prototype.hasOwnProperty.call(currentValue, key)) {
+          findings.push(`${currentPath}.${key} is required.`);
+        }
+      }
+
+      const properties = isPlainObject(currentSchema.properties) ? currentSchema.properties : {};
+      for (const [key, propertySchema] of Object.entries(properties)) {
+        if (Object.prototype.hasOwnProperty.call(currentValue, key)) {
+          visit(currentValue[key], propertySchema, `${currentPath}.${key}`);
+        }
+      }
+
+      const keys = Object.keys(currentValue);
+      if (Number.isInteger(currentSchema.minProperties) && keys.length < currentSchema.minProperties) {
+        findings.push(`${currentPath} must contain at least ${currentSchema.minProperties} propert(ies).`);
+      }
+
+      if (currentSchema.additionalProperties === false) {
+        for (const key of keys) {
+          if (!Object.prototype.hasOwnProperty.call(properties, key)) {
+            findings.push(`${currentPath}.${key} is not allowed.`);
+          }
+        }
+      } else if (isPlainObject(currentSchema.additionalProperties)) {
+        for (const key of keys) {
+          if (!Object.prototype.hasOwnProperty.call(properties, key)) {
+            visit(currentValue[key], currentSchema.additionalProperties, `${currentPath}.${key}`);
+          }
+        }
+      }
+    }
+  }
+
+  visit(value, schema, pathLabel);
+  return findings;
+}
+
 async function walkMarkdownFiles(baseDir) {
   const results = [];
 
@@ -205,14 +312,12 @@ export async function runGovernanceAnalysis({
   const config = await loadGovernanceConfig(configPath);
   const errors = [];
   const warnings = [];
+  let activePlansAnalyzed = 0;
 
   const docsDir = path.join(rootDir, 'docs');
   const markdownFilesAbs = await walkMarkdownFiles(docsDir);
   const markdownExcludePrefixes = normalizePrefixList(
-    config.markdownExcludePrefixes ?? [
-      'docs/ops/automation/runtime/',
-      'docs/ops/automation/handoffs/'
-    ]
+    config.markdownExcludePrefixes ?? []
   );
   const markdownFilesRel = markdownFilesAbs
     .map((entry) => toPosix(path.relative(rootDir, entry)))
@@ -231,25 +336,37 @@ export async function runGovernanceAnalysis({
   const refsGraph = new Map();
 
   for (const rel of sourceFiles) {
-    const fileAbs = path.join(rootDir, rel);
+    const resolved = resolveConfigPath(rootDir, rel, errors, 'OUT_OF_REPO_SCAN_FILE', 'Scan file');
+    if (!resolved) {
+      continue;
+    }
+    const fileAbs = resolved.abs;
     if (!(await exists(fileAbs))) {
       continue;
     }
 
     const content = await fs.readFile(fileAbs, 'utf8');
-    contents.set(rel, content);
-    refsGraph.set(rel, extractRefs(content, rel));
+    contents.set(resolved.rel, content);
+    refsGraph.set(resolved.rel, extractRefs(content, resolved.rel));
   }
 
   for (const rel of config.canonicalDocs ?? []) {
-    const abs = path.join(rootDir, rel);
+    const resolved = resolveConfigPath(rootDir, rel, errors, 'OUT_OF_REPO_CANONICAL_DOC', 'Canonical doc');
+    if (!resolved) {
+      continue;
+    }
+    const abs = resolved.abs;
     if (!(await exists(abs))) {
-      errors.push(makeFinding('error', 'MISSING_CANONICAL_DOC', `Missing canonical doc: ${rel}`, rel));
+      errors.push(makeFinding('error', 'MISSING_CANONICAL_DOC', `Missing canonical doc: ${resolved.rel}`, resolved.rel));
     }
   }
 
   for (const rel of config.requiredDirs ?? []) {
-    const abs = path.join(rootDir, rel);
+    const resolved = resolveConfigPath(rootDir, rel, errors, 'OUT_OF_REPO_REQUIRED_DIR', 'Required directory');
+    if (!resolved) {
+      continue;
+    }
+    const abs = resolved.abs;
     let stat = null;
     try {
       stat = await fs.stat(abs);
@@ -258,7 +375,7 @@ export async function runGovernanceAnalysis({
     }
 
     if (!stat?.isDirectory()) {
-      errors.push(makeFinding('error', 'MISSING_REQUIRED_DIR', `Missing required docs directory: ${rel}`, rel));
+      errors.push(makeFinding('error', 'MISSING_REQUIRED_DIR', `Missing required docs directory: ${resolved.rel}`, resolved.rel));
     }
   }
 
@@ -456,10 +573,11 @@ export async function runGovernanceAnalysis({
   const activePlansConfig = config.activePlans ?? null;
   if (activePlansConfig) {
     const activeDirRel = activePlansConfig.directory;
-    const activeDirAbs = path.join(rootDir, activeDirRel);
+    const activeDir = resolveConfigPath(rootDir, activeDirRel, errors, 'OUT_OF_REPO_ACTIVE_PLAN_DIR', 'Active plans directory');
+    const activeDirAbs = activeDir?.abs;
     let activeEntries = [];
     try {
-      activeEntries = await fs.readdir(activeDirAbs, { withFileTypes: true });
+      activeEntries = activeDirAbs ? await fs.readdir(activeDirAbs, { withFileTypes: true }) : [];
     } catch {
       errors.push(makeFinding('error', 'MISSING_ACTIVE_PLAN_DIR', `Missing active plans directory: ${activeDirRel}`, activeDirRel));
       activeEntries = [];
@@ -470,6 +588,7 @@ export async function runGovernanceAnalysis({
       .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.md') && !exclude.has(entry.name))
       .map((entry) => `${activeDirRel}/${entry.name}`)
       .sort((a, b) => a.localeCompare(b));
+    activePlansAnalyzed = planFiles.length;
 
     for (const planFile of planFiles) {
       const content = contents.get(planFile) ?? (await fs.readFile(path.join(rootDir, planFile), 'utf8'));
@@ -496,10 +615,11 @@ export async function runGovernanceAnalysis({
   const completedPlansConfig = config.completedPlans ?? null;
   if (completedPlansConfig) {
     const completedDirRel = completedPlansConfig.directory;
-    const completedDirAbs = path.join(rootDir, completedDirRel);
+    const completedDir = resolveConfigPath(rootDir, completedDirRel, errors, 'OUT_OF_REPO_COMPLETED_PLAN_DIR', 'Completed plans directory');
+    const completedDirAbs = completedDir?.abs;
     let entries = [];
     try {
-      entries = await fs.readdir(completedDirAbs, { withFileTypes: true });
+      entries = completedDirAbs ? await fs.readdir(completedDirAbs, { withFileTypes: true }) : [];
     } catch {
       errors.push(makeFinding('error', 'MISSING_COMPLETED_PLAN_DIR', `Missing completed plans directory: ${completedDirRel}`, completedDirRel));
       entries = [];
@@ -573,6 +693,61 @@ export async function runGovernanceAnalysis({
     }
   }
 
+  for (const validation of config.jsonSchemaValidation ?? []) {
+    const dataPath = validation.dataPath;
+    const schemaPath = validation.schemaPath;
+    if (!dataPath || !schemaPath) {
+      errors.push(makeFinding('error', 'INVALID_SCHEMA_VALIDATION_CONFIG', 'jsonSchemaValidation entries require dataPath and schemaPath.'));
+      continue;
+    }
+
+    let data = null;
+    let schema = null;
+    const resolvedDataPath = resolveConfigPath(rootDir, dataPath, errors, 'OUT_OF_REPO_SCHEMA_VALIDATION_DATA', 'Schema validation data path');
+    const resolvedSchemaPath = resolveConfigPath(rootDir, schemaPath, errors, 'OUT_OF_REPO_SCHEMA_VALIDATION_SCHEMA', 'Schema validation schema path');
+    if (!resolvedDataPath || !resolvedSchemaPath) {
+      continue;
+    }
+    try {
+      data = JSON.parse(await fs.readFile(resolvedDataPath.abs, 'utf8'));
+    } catch (error) {
+      errors.push(
+        makeFinding(
+          'error',
+          'INVALID_SCHEMA_VALIDATION_DATA',
+          `Unable to read or parse schema validation data ${dataPath}: ${error instanceof Error ? error.message : String(error)}`,
+          dataPath
+        )
+      );
+      continue;
+    }
+    try {
+      schema = JSON.parse(await fs.readFile(resolvedSchemaPath.abs, 'utf8'));
+    } catch (error) {
+      errors.push(
+        makeFinding(
+          'error',
+          'INVALID_SCHEMA_VALIDATION_SCHEMA',
+          `Unable to read or parse schema ${schemaPath}: ${error instanceof Error ? error.message : String(error)}`,
+          schemaPath
+        )
+      );
+      continue;
+    }
+
+    const schemaFindings = validateJsonSchemaSubset(data, schema);
+    for (const finding of schemaFindings) {
+      errors.push(
+        makeFinding(
+          'error',
+          'JSON_SCHEMA_VALIDATION_FAILED',
+          `${dataPath} does not satisfy ${schemaPath}: ${finding}`,
+          dataPath
+        )
+      );
+    }
+  }
+
   const techDebt = config.techDebtTracker ?? null;
   if (techDebt) {
     const content = contents.get(techDebt.path);
@@ -597,7 +772,11 @@ export async function runGovernanceAnalysis({
   }
 
   for (const artifact of config.generatedArtifacts ?? []) {
-    const artifactAbs = path.join(rootDir, artifact.path);
+    const resolvedArtifact = resolveConfigPath(rootDir, artifact.path, errors, 'OUT_OF_REPO_GENERATED_ARTIFACT', 'Generated artifact path');
+    if (!resolvedArtifact) {
+      continue;
+    }
+    const artifactAbs = resolvedArtifact.abs;
     if (!(await exists(artifactAbs))) {
       errors.push(makeFinding('error', 'MISSING_GENERATED_ARTIFACT', `Missing generated artifact: ${artifact.path}`, artifact.path));
       continue;
@@ -721,7 +900,7 @@ export async function runGovernanceAnalysis({
     stats: {
       markdownFilesAnalyzed: sourceFiles.length,
       docFilesAnalyzed: docFiles.length,
-      activePlansAnalyzed: config.activePlans?.directory ? (await fs.readdir(path.join(rootDir, config.activePlans.directory)).catch(() => [])).filter((name) => name.toLowerCase().endsWith('.md')).length : 0,
+      activePlansAnalyzed,
       brokenRefCount: errors.filter((finding) => finding.code === 'BROKEN_DOC_REF').length
     }
   };

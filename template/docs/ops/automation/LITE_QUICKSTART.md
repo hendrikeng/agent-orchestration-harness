@@ -7,66 +7,53 @@ Source of Truth: This document.
 
 ## Purpose
 
-Use this as the canonical reference for how the harness is intended to work day to day.
-`Lite` here means a flat, low-overhead control plane, not a manual-only workflow.
+Use this as the simplest explanation of how the manual harness should operate day to day.
+`Lite` means low-overhead control, not weak process.
 
 ## Default Operating Loop
 
-This is the intended default:
-
-1. Plan futures in plan mode.
-2. Create or update executable future slices in `docs/future/` immediately as the user decides what should be built.
-3. Use one future file per executable slice.
-4. Split broader efforts into multiple future files linked by `Dependencies`.
-5. Set `Status: ready-for-promotion` when a future slice is decision-complete.
-6. Let `automation:run`, `automation:resume`, or `automation:grind` promote ready futures and work the queue in sequence.
-7. Validate, commit the slice atomically, curate evidence, and move finished work to `docs/exec-plans/completed/`.
+1. Plan a future in `docs/future/`.
+2. Make it decision-complete.
+3. Promote it manually into `docs/exec-plans/active/`.
+4. Implement, validate, review, and keep evidence current.
+5. Close the slice in `docs/exec-plans/completed/`.
 
 ## Planning Rules
 
-- Planning-only requests should not edit product code or tests.
-- Every future slice must keep `## Already-True Baseline`, `## Must-Land Checklist`, and `## Deferred Follow-Ons` separate.
-- `## Must-Land Checklist` is the exact execution contract for promotion and grind.
-- Keep `Implementation-Targets`, `Risk-Tier`, `Validation-Lanes`, and `Security-Approval` explicit.
-- Do not reintroduce program parents, child-plan generation, or a second orchestration layer.
+- One future file equals one executable slice.
+- `## Must-Land Checklist` is the exact execution contract.
+- Checklist items must be Markdown task-list items with stable backticked IDs.
+- Keep dependencies, implementation targets, risk tier, validation lanes, and security approval truthful.
+- Planning-only requests stop in `docs/future/`.
 
-## Grind Rules
+## Execution Rules
 
-- `low` risk: `worker`
-- `medium` risk: `worker -> reviewer`
-- `high` risk: `worker -> reviewer`, plus explicit `Security-Approval`
-- Low-context sessions should hand off cleanly before they run into the edge of the context window.
-- The next agent should continue from the current plan, latest checkpoint, latest handoff, runtime context, and only the evidence relevant to that slice.
-
-## Manual Exception
-
-Use a direct active plan only when all of these are true:
-
-- The task is tiny and low risk.
-- The work does not need staged future planning.
-- The same metadata, verification, and closure rules are still followed.
+- Use a direct active plan only when the task is genuinely small, low risk, and does not need staging in `docs/future/`.
+- Work one active slice at a time.
+- Keep validation evidence with the plan or PR while the slice is active.
+- Do not let “manual” become an excuse for vague promotion or weak evidence.
+- Keep scope changes visible in the active plan; split follow-up work when it stops fitting the current slice.
+- Review medium and high risk changes before closeout.
 
 ## Required Commands
 
 - `npm run context:compile`
+- `npm run docs:verify`
+- `npm run architecture:verify`
+- `npm run agent:verify`
+- `npm run eval:verify`
 - `npm run plans:verify`
+- `npm run project:gates:verify`
 - `npm run verify:fast`
 - `npm run verify:full`
-- `npm run automation:run -- --max-risk low|medium|high --max-sessions-per-plan N`
-- `npm run automation:resume -- --max-risk low|medium|high --max-sessions-per-plan N`
-- `npm run automation:grind -- --max-risk low|medium|high --max-sessions-per-plan N`
-- `npm run automation:audit`
-- If you omit `--max-risk`, the package scripts use the repo's configured default risk ceiling. The template default is `high`.
-- If you omit `--max-sessions-per-plan`, the package scripts use `executor.maxSessionsPerPlan`. The template default is `12`.
 
 ## Non-Negotiables
 
-- Plan in futures first unless the task is truly tiny.
 - Promote only decision-complete futures.
-- Keep the queue flat: `future -> active -> completed`.
-- Preserve strong validation and evidence.
-- Preserve low-context handoff discipline.
-- Optimize for low token waste, not orchestration cleverness.
+- Keep the queue flat and manual.
+- Preserve validation and evidence discipline.
+- Keep agent-specific adapter files subordinate to canonical docs.
+- Do not claim production readiness from placeholder gates or generic checks that do not cover the changed behavior.
 
 ## Reference Docs
 
@@ -74,4 +61,3 @@ Use a direct active plan only when all of these are true:
 - `docs/future/README.md`
 - `docs/exec-plans/README.md`
 - `docs/ops/automation/README.md`
-- `docs/ops/automation/ROLE_ORCHESTRATION.md`

@@ -8,81 +8,22 @@ Current State Date: {{CURRENT_STATE_DATE}}
 
 {{SUMMARY}}
 
-This file is intended to become the adopted repository's root `README.md` after bootstrap.
-
-## Operating Model
-
-- Docs-first minimal: repository-local docs are the system of record.
-- `AGENTS.md` is the concise operating map for humans and agents.
-- Non-trivial work follows one flat queue: `future -> active -> completed`.
-- Codex plan mode creates or updates future slices.
-- Orchestrated execution is sequential and bounded: `worker` for low risk, `worker -> reviewer` for medium/high risk.
-- Runtime state stays repo-local with one latest checkpoint and one handoff note per unfinished plan.
-
-## Lite Quickstart
-
-Treat `docs/ops/automation/LITE_QUICKSTART.md` as the behavioral reference for how this harness is meant to operate.
-
-Default loop:
-
-1. Plan futures by creating or refining future slices in `docs/future/`.
-2. Keep one future file per executable slice and link broader work with `Dependencies`.
-3. Set `Status: ready-for-promotion` once the slice is decision-complete.
-4. Run `automation:run`, `automation:resume`, or `automation:grind` to promote ready futures and work the queue in sequence.
-5. Let low-context sessions hand off cleanly, then validate and close into `docs/exec-plans/completed/`.
-
-Reference: `docs/ops/automation/LITE_QUICKSTART.md`.
-
-## Execution Paths
-
-- `Plan futures`: use Codex plan mode to create or refine future slices in `docs/future/`.
-- `Promote when ready`: set `Status: ready-for-promotion` once the slice is executable.
-- `Run in sequence`: use `automation:run`, `automation:resume`, or `automation:grind` to promote ready futures and work the active queue.
-- `Manual loop`: direct human execution is still valid when the scope is small and the same metadata, verification, and closure rules are preserved.
-
-## Session Safety and Context Continuity
-
-- Default memory posture is repo-local: plans, docs, code, validation output, and evidence are the source of truth.
-- Runtime context is rebuilt from canonical docs at `docs/generated/AGENT-RUNTIME-CONTEXT.md`.
-- Every execution session must write a structured result payload to `ORCH_RESULT_PATH`.
-- Execution sessions also report remaining context so the harness can hand work off before a session gets too close to the edge.
-- Resume behavior relies on a single latest checkpoint plus a human-readable handoff note, not on contact packs, stage reuse, or continuity analytics.
-- The harness deliberately avoids parallel worktrees, branch workers, and multi-stage planner/explorer runtime loops.
-
-## Machine Contracts
-
-The harness treats machine-readable runtime artifacts as explicit contracts, not informal JSON:
-
-- `harness-manifest.json` in `docs/ops/automation/` tracks downstream template ownership.
-- `run-state.json` and `run-events.jsonl` in `docs/ops/automation/` track the sequential queue and append-only event history.
-- `docs/ops/automation/runtime/` stores latest per-plan checkpoints and validation artifacts.
-- `docs/ops/automation/handoffs/` stores the latest human-readable follow-up note for unfinished work.
-
-If a contract is missing, malformed, or incompatible, the harness should fail closed with a clear error.
-
-## Documentation Navigation
-
-Start with:
-- `AGENTS.md`
-- `ARCHITECTURE.md`
-- `docs/MANIFEST.md`
-- `docs/README.md`
-- `docs/PLANS.md`
-- `docs/FRONTEND.md`
-- `docs/BACKEND.md`
-- `docs/agent-hardening/README.md`
-- `docs/governance/README.md`
-- `docs/product-specs/README.md`
-- `docs/product-specs/CURRENT-STATE.md`
-- `docs/exec-plans/README.md`
-- `docs/ops/automation/README.md`
-
-## Platform Scope Snapshot
+## Product Scope
 
 - {{SCOPE1}}
 - {{SCOPE2}}
 - {{SCOPE3}}
-- Keep this section to stable platform scope and major capability areas; detailed current behavior is tracked in `docs/product-specs/CURRENT-STATE.md`.
+
+Detailed current behavior, terminology, risks, and product-state notes live in `docs/product-specs/CURRENT-STATE.md`.
+
+## Operating Model
+
+- Repository-local docs, code, checks, plans, and evidence are the durable source of truth.
+- `AGENTS.md` is the concise operating map for humans and agents.
+- Non-trivial work follows one flat queue: `docs/future/ -> docs/exec-plans/active/ -> docs/exec-plans/completed/`.
+- Planning-only work creates or updates future slices and stops before implementation.
+- Small, isolated, low-risk fixes may proceed directly when the PR carries enough review evidence.
+- Every meaningful change should leave the repository easier for the next engineer or agent to understand.
 
 ## Architecture At A Glance
 
@@ -90,46 +31,56 @@ Start with:
 - Backend/runtime stack: {{BACKEND_STACK}}
 - Data/storage stack: {{DATA_STACK}}
 - Shared contracts/primitives strategy: {{SHARED_CONTRACT_STRATEGY}}
+- Architecture entrypoint: `ARCHITECTURE.md`
 - Frontend standards: `docs/FRONTEND.md`
 - Backend standards: `docs/BACKEND.md`
+- Security model: `docs/SECURITY.md`
+- Reliability model: `docs/RELIABILITY.md`
 
-## Documentation Layering
+## Documentation Navigation
 
-- `AGENTS.md`: concise operating map and non-negotiables.
-- `README.md`: concise product entrypoint, workflow summary, and major capability map.
-- `ARCHITECTURE.md` + `docs/architecture/*`: architecture source of truth.
-- `docs/FRONTEND.md` and `docs/BACKEND.md`: implementation-side standards.
+Start with:
+
+- `AGENTS.md`
+- `ARCHITECTURE.md`
+- `docs/MANIFEST.md`
+- `docs/README.md`
+- `docs/PLANS.md`
+- `docs/QUALITY_SCORE.md`
+- `docs/FRONTEND.md`
+- `docs/BACKEND.md`
+- `docs/SECURITY.md`
+- `docs/RELIABILITY.md`
+- `docs/agent-hardening/README.md`
+- `docs/governance/README.md`
+- `docs/governance/RULES.md`
+- `docs/governance/project-gates.json`
+- `docs/product-specs/README.md`
+- `docs/product-specs/CURRENT-STATE.md`
+- `docs/exec-plans/README.md`
+- `docs/ops/automation/README.md`
+
+Use `docs/MANIFEST.md` for the complete first-class documentation inventory.
 
 ## Enforcement and Quality Gates
 
+- Bootstrap verification after initial placeholder replacement: `./scripts/bootstrap-verify.sh`
+- Placeholder check: `./scripts/check-template-placeholders.sh`
 - Runtime context build: `npm run context:compile`
+- Docs governance: `npm run docs:verify`
+- Architecture rules: `npm run architecture:verify`
+- Agent policy checks: `npm run agent:verify`
+- Eval report checks: `npm run eval:verify`
+- Project gate declaration: `npm run project:gates:verify`
 - Plan metadata verification: `npm run plans:verify`
 - Fast iteration profile: `npm run verify:fast`
 - Full merge profile: `npm run verify:full`
-- Harness alignment check: `npm run harness:verify` verifies both `package.scripts.fragment.json` and the merged `package.json` operator scripts.
-- Canonical policy map: `docs/governance/RULES.md`, `docs/governance/policy-manifest.json`, `docs/ops/automation/README.md`
+- Harness alignment: `npm run harness:verify`
 
-## When To Run Checks
-
-- During implementation loops: `npm run verify:fast`.
-- Before merge: `npm run verify:full`.
-- Before a new automated grind: `npm run context:compile` and `npm run plans:verify`.
-
-## Automation Conveyor Commands
-
-- Start a new sequential run: `npm run automation:run -- --max-risk low|medium|high --max-sessions-per-plan N`
-- Continue the current run: `npm run automation:resume -- --max-risk low|medium|high --max-sessions-per-plan N`
-- Drain the queue in supervised sequential mode: `npm run automation:grind -- --max-risk low|medium|high --max-sessions-per-plan N`
-- If you omit `--max-risk`, these commands use the repo's configured `risk.defaultMaxRisk`. The template default is `high`.
-- If you omit `--max-sessions-per-plan`, these commands use `executor.maxSessionsPerPlan`. The template default is `12`.
-- Plans that stop only because they hit the session cap move to `Status: budget-exhausted`; resume them with a higher `--max-sessions-per-plan`.
-- Only one orchestrator process should run per repository at a time. `automation:run`, `automation:resume`, and `automation:grind` now enforce that with a repo-local runtime lock and fail fast if another run is already active.
-- Inspect ready, active, blocked, and completed state: `npm run automation:audit`
-- Canonical details live in `docs/ops/automation/README.md`, `docs/ops/automation/ROLE_ORCHESTRATION.md`, and `docs/ops/automation/LITE_QUICKSTART.md`.
+Adopted projects must wire stack-specific lint, typecheck, test, build, database, browser, deployment, and security checks through `docs/governance/project-gates.json`. A missing gate must be marked `deferred` or `not-applicable` with a concrete rationale; silent missing testing is not allowed.
 
 ## Change Discipline
 
-Changes affecting architecture boundaries, critical invariants,
-security/compliance domains, or user-visible behavior must update docs in the same change.
-Update this README only when the change affects top-level product scope, stack, workflow, architecture, commands, or the major capability map; put detailed behavior and delivery-history updates in `docs/product-specs/CURRENT-STATE.md`, relevant domain docs, completed plans, and evidence indexes.
-Implementation work should translate requests into verifiable goals, pair multi-step changes with checks, and keep changed lines traceable to the request, active plan, or required validation.
+Changes affecting architecture boundaries, critical invariants, security, reliability, workflow, or user-visible behavior must update docs in the same change.
+
+Update this README only when the change affects top-level product scope, stack, workflow, architecture, commands, or the major capability map. Put detailed behavior in `docs/product-specs/CURRENT-STATE.md`; put delivery evidence in completed plans and evidence indexes.

@@ -9,6 +9,7 @@
     "**/*"
   ],
   "excludeGlobs": [
-    ".gitignore"
+    ".gitignore",
+    "docs/ops/automation/harness-manifest.json"
   ]
 }

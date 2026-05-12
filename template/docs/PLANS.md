@@ -11,7 +11,7 @@ The canonical workflow is:
 
 1. Plan in `docs/future/`.
 2. Make future slices decision-complete.
-3. Promote and run ready futures through the flat queue in sequence.
+3. Promote ready futures through the flat queue in sequence.
 
 ## Work Classes
 
@@ -35,7 +35,7 @@ Examples:
 
 ## Lifecycle
 
-1. Strategic/non-trivial path: draft in `docs/future/` and set readiness (`draft` -> `ready-for-promotion`), then promote into `docs/exec-plans/active/` (normally via orchestrator).
+1. Strategic/non-trivial path: draft in `docs/future/` and set readiness (`draft` -> `ready-for-promotion`), then promote into `docs/exec-plans/active/`.
    Use the Future Intake Gate and Promotion Gate in `docs/future/README.md` before setting `Status: ready-for-promotion`.
 2. Quick/manual path: create the plan directly in `docs/exec-plans/active/` with complete metadata.
 3. Record decisions and acceptance criteria before implementation.
@@ -47,7 +47,7 @@ Examples:
 8. Before merge/completion, run `npm run verify:full` plus relevant domain tests.
 9. Complete by moving to `docs/exec-plans/completed/` with concise summary/closure and canonical `Done-Evidence` index references.
 
-Orchestration is the default execution driver for non-trivial queued work. Manual execution is valid only if it preserves status transitions, metadata integrity, and evidence/index curation behavior.
+Execution is valid only if it preserves status transitions, metadata integrity, validation, and evidence/index curation behavior.
 
 ## Plan-Only Requests
 
@@ -58,7 +58,7 @@ When the user asks for planning only (no implementation yet):
 3. Stop once the future slice is decision-complete; do not continue into implementation just because the next coding step is obvious.
 4. Make `## Must-Land Checklist` the exact executable contract for the future promotion.
 5. Keep `Dependencies` explicit when the work depends on earlier slices.
-6. Use separate future files instead of program parents when one ask expands into multiple executable slices.
+6. Use separate future files instead of parent/child planning trees when one ask expands into multiple executable slices.
 7. Set `Status: ready-for-promotion` when the plan is implementation-ready.
 
 This also applies when the agent/session is explicitly set to plan mode: default to `docs/future` planning outputs until implementation is explicitly requested. Planning completion is not execution approval.

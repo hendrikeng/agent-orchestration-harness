@@ -14,3 +14,5 @@ Source of Truth: This document.
 
 - References are supporting material, not policy.
 - Canonical policy remains in governance/design/architecture docs.
+- Keep references small enough to load only when the active plan or nearest live code path needs that feature context.
+- If a reference starts carrying general rules, promote the rule to the canonical owner and link back here instead of duplicating it.

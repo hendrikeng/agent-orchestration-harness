@@ -2,11 +2,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { resolveRepoOrAbsolutePath, writeTextFileAtomic } from './lib/orchestrator-shared.mjs';
-import { CONTRACT_IDS, prepareContractPayload } from './lib/contracts/index.mjs';
 
 const rootDir = process.cwd();
-const aggregateResultPath = String(process.env.ORCH_VALIDATION_RESULT_PATH ?? '').trim();
 const PLAN_ID_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function parseArgs(argv) {
@@ -71,7 +68,7 @@ function detectChangedFiles() {
 }
 
 function resolvedPlanMetadataCommand() {
-  const planId = String(process.env.ORCH_PLAN_ID ?? '').trim().toLowerCase();
+  const planId = String(process.env.VERIFY_PLAN_ID ?? '').trim().toLowerCase();
   if (!planId || !PLAN_ID_REGEX.test(planId)) {
     return 'node ./scripts/automation/check-plan-metadata.mjs';
   }
@@ -81,12 +78,16 @@ function resolvedPlanMetadataCommand() {
 function buildCommandSet(changedFiles) {
   const commands = [
     'node ./scripts/automation/compile-runtime-context.mjs',
+    'node ./scripts/automation/lint-changed.mjs',
+    'node ./scripts/automation/check-path-policy.mjs',
     asBoolean(process.env.CI, false)
       ? 'node ./scripts/docs/repair-plan-references.mjs --dry-run'
       : 'node ./scripts/docs/repair-plan-references.mjs',
     'node ./scripts/docs/check-governance.mjs',
     resolvedPlanMetadataCommand(),
-    'node ./scripts/automation/check-harness-alignment.mjs'
+    'node ./scripts/automation/check-plan-closeout.mjs',
+    'node ./scripts/automation/check-harness-alignment.mjs',
+    'node ./scripts/automation/check-project-gates.mjs --profile fast --run'
   ];
 
   const needsArchitecture = changedFiles.some((file) => (
@@ -101,22 +102,6 @@ function buildCommandSet(changedFiles) {
   return commands;
 }
 
-async function writeValidationResult(payload) {
-  if (!aggregateResultPath) {
-    return;
-  }
-  const absPath = resolveRepoOrAbsolutePath(rootDir, aggregateResultPath)?.abs;
-  if (!absPath) {
-    return;
-  }
-  const normalized = prepareContractPayload(CONTRACT_IDS.validationResult, {
-    ...payload,
-    command: String(payload?.command ?? 'npm run verify:fast').trim(),
-    lane: 'always'
-  });
-  await writeTextFileAtomic(absPath, `${JSON.stringify(normalized, null, 2)}\n`, 'utf8');
-}
-
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const dryRun = asBoolean(options['dry-run'], false);
@@ -127,49 +112,15 @@ async function main() {
   for (const command of commands) {
     const execution = runCommand(command, dryRun);
     if (execution.status !== 0) {
-      await writeValidationResult({
-        validationId: process.env.ORCH_VALIDATION_ID || 'repo:verify-fast',
-        type: process.env.ORCH_VALIDATION_TYPE || 'always',
-        status: 'failed',
-        summary: `[verify-fast] failed: ${command}`,
-        startedAt: new Date().toISOString(),
-        finishedAt: new Date().toISOString(),
-        findingFiles: [],
-        evidenceRefs: [],
-        artifactRefs: []
-      });
       process.exit(execution.status);
     }
   }
 
-  await writeValidationResult({
-    validationId: process.env.ORCH_VALIDATION_ID || 'repo:verify-fast',
-    type: process.env.ORCH_VALIDATION_TYPE || 'always',
-    status: 'passed',
-    summary: '[verify-fast] passed.',
-    startedAt: new Date().toISOString(),
-    finishedAt: new Date().toISOString(),
-    findingFiles: [],
-    evidenceRefs: [],
-    artifactRefs: []
-  });
   console.log('[verify-fast] passed.');
 }
 
 main().catch((error) => {
-  writeValidationResult({
-    validationId: process.env.ORCH_VALIDATION_ID || 'repo:verify-fast',
-    type: process.env.ORCH_VALIDATION_TYPE || 'always',
-    status: 'failed',
-    summary: error instanceof Error ? error.message : String(error),
-    startedAt: new Date().toISOString(),
-    finishedAt: new Date().toISOString(),
-    findingFiles: [],
-    evidenceRefs: [],
-    artifactRefs: []
-  }).finally(() => {
-    console.error('[verify-fast] failed with an unexpected error.');
-    console.error(error instanceof Error ? error.stack : String(error));
-    process.exit(1);
-  });
+  console.error('[verify-fast] failed with an unexpected error.');
+  console.error(error instanceof Error ? error.stack : String(error));
+  process.exit(1);
 });

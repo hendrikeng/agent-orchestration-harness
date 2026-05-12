@@ -9,13 +9,6 @@ export const RISK_TIERS = new Set(['low', 'medium', 'high']);
 export const SECURITY_APPROVAL_VALUES = new Set(['not-required', 'pending', 'approved']);
 export const DELIVERY_CLASSES = new Set(['product', 'docs', 'ops', 'reconciliation']);
 export const VALIDATION_LANES = new Set(['always', 'host-required']);
-export const LEGACY_METADATA_FIELDS = new Set([
-  'Authoring-Intent',
-  'Autonomy-Allowed',
-  'Execution-Scope',
-  'Parent-Plan-ID',
-  'Validation-Ready'
-]);
 export const PLAN_ID_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const REQUIRED_METADATA_FIELDS = {
   future: [

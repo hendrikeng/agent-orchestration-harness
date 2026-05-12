@@ -1,70 +1,98 @@
-# Agent Runtime Context (Generated)
+# Agent Runtime Context
 
-Primary Sources: AGENTS.md, docs/governance/policy-manifest.json, docs/ops/automation/orchestrator.config.json
+Status: generated
+Owner: {{DOC_OWNER}}
+Last Updated: 2026-05-12
+Source of Truth: Derived from AGENTS.md and docs/governance/policy-manifest.json.
 
 ## Mission
-- Plan futures by creating or updating executable future slices directly in docs/future/.
-- Run a flat queue in sequence: promote ready slices, implement them, review medium/high risk work, validate, and close.
-- Keep the repo as the source of truth for plans, evidence, runtime state, and handoffs.
+
+- Use canonical entrypoints to rebuild context quickly.
+- Follow the repo-local queue: `docs/future/ -> docs/exec-plans/active/ -> docs/exec-plans/completed/`.
+- Treat plans, docs, validation output, change summaries, and evidence as the durable memory system.
+- Keep agent-specific instructions subordinate to repo-local canonical docs.
+
+## Execution Model
+
+- mode: repo-local-engineering-system
+- queue: docs/future
+- queue: docs/exec-plans/active
+- queue: docs/exec-plans/completed
+- source: canonical docs
+- source: current product state
+- source: execution plans
+- source: validation output
+- source: evidence indexes
+
+Canonical entrypoints:
+- `AGENTS.md`
+- `README.md`
+- `ARCHITECTURE.md`
+- `docs/MANIFEST.md`
+- `docs/README.md`
+- `docs/PLANS.md`
+- `docs/governance/RULES.md`
+- `docs/generated/AGENT-RUNTIME-CONTEXT.md`
+- `docs/product-specs/CURRENT-STATE.md`
 
 ## Hard Safety Rules
-- [correctness_over_speed] Correctness over speed for critical domains.
-- [server_side_authority] Sensitive authority remains server-side for critical boundaries.
-- [no_fake_success_paths] Never fabricate production success-path behavior.
-- [shared_contracts_are_canonical] Shared contracts and primitives are canonical where applicable.
-- [docs_are_part_of_done] Architecture, invariant, and user-visible changes must update canonical docs in the same change.
-- [plan_mode_stops_at_future_docs] In plan mode or planning-only requests, stop after creating or updating docs/future output; do not edit source, test, or runtime files unless implementation is explicitly requested.
-- [no_destructive_git_without_instruction] Never run destructive git/file commands without explicit written instruction.
 
-## Planning Roles
-- planner: Turn user intent into decision-complete future slices only; do not continue into implementation unless the user explicitly asks to implement, execute, or promote the plan.
-- explorer: Trace risky surfaces and dependencies before implementation when planning needs more facts.
-
-## Grind Roles
-- worker: sandbox=full-access, reasoning=high
-- reviewer: sandbox=read-only, reasoning=high
-- review required for: medium, high
-- explicit security approval required for: high
-- low-context handoff threshold: <= 12000 remaining tokens or <= 15% remaining context when available
+- `correctness_over_speed`: Correctness over speed for critical domain data, permissions, external effects, and user-visible workflows.
+- `server_side_authority`: Sensitive writes, privileged checks, billing or payment actions, identity decisions, and external side effects stay server-side.
+- `no_fake_success_paths`: Do not fabricate production success paths, silent fallbacks, or operational outcomes.
+- `docs_are_part_of_done`: Behavior, workflow, architecture, security, reliability, and boundary changes must update canonical docs in the same slice.
+- `planning_only_stops_in_future`: Planning-only work stops in docs/future and must not spill into source or test changes without explicit implementation intent.
+- `one_slice_one_plan`: One executable slice maps to one future or active plan file; split broader work into ordered slices with explicit dependencies.
+- `review_is_required`: Non-trivial implementation work needs review scrutiny for correctness, security, reliability, missing tests, docs, and evidence before it is treated as done.
+- `no_destructive_git_without_instruction`: Never run destructive git or file commands without explicit written instruction.
+- `agent_adapters_are_subordinate`: Agent-specific adapter files may exist only as thin entrypoints and must defer to canonical repo docs.
+- `quality_bar_is_binding`: Non-trivial changes must clear the quality bar for correctness, contracts, maintainability, reliability, security, user experience, and evidence.
+- `canonical_policy_owner`: General engineering rules live once in their canonical owner; supporting references, generated artifacts, and agent adapters must not fork policy.
+- `real_project_gates_required`: Adopted projects must wire real lint, typecheck, test, and build gates or explicitly justify deferred or not-applicable gates in docs/governance/project-gates.json.
 
 ## Verification Profiles
-- fast: node ./scripts/automation/compile-runtime-context.mjs ; node ./scripts/docs/check-governance.mjs ; node ./scripts/automation/check-plan-metadata.mjs ; node ./scripts/automation/check-harness-alignment.mjs
-- full: node ./scripts/automation/compile-runtime-context.mjs ; node ./scripts/docs/check-governance.mjs ; node ./scripts/check-article-conformance.mjs ; node ./scripts/architecture/check-dependencies.mjs ; node ./scripts/agent-hardening/check-agent-hardening.mjs ; node ./scripts/agent-hardening/check-evals.mjs ; node ./scripts/automation/check-harness-alignment.mjs ; node ./scripts/automation/check-plan-metadata.mjs
-- validation lanes: always=repo:verify-fast ; host-required=repo:verify-full
+
+- fast: npm run context:compile ; npm run docs:verify ; npm run architecture:verify ; npm run agent:verify ; npm run plans:verify ; npm run harness:verify ; npm run project:gates:fast
+- full: npm run verify:fast ; npm run project:gates:full ; project-specific typecheck/build/test gates
+- repo health: project-specific lint/build/test commands
 
 ## Execution Quality
+
 - goal: Translate implementation requests into verifiable goals before editing.
 - goal: For multi-step work, pair each planned step with the check that proves it.
-- goal: Loop on the smallest relevant check until the goal is verified, then run the required slice gate before closeout.
+- goal: Loop on the smallest relevant check until the goal is verified, then run the required gate before closeout.
 - scope: Prefer the smallest implementation that satisfies the must-land checklist.
 - scope: Every changed line should trace to the user request, active plan, or required validation.
-- assumption: State material assumptions when intent has multiple plausible interpretations; ask or stop rather than silently choosing a risky path.
+- scope: Use abstractions only when they clarify ownership, remove real duplication, or create a stable cross-layer contract.
+- assumption: State material assumptions when intent has multiple plausible interpretations.
+- assumption: Ask or stop rather than silently choosing a risky path.
+- assumption: Do not claim production readiness from proxy signals unless the checks cover the changed behavior.
 
 ## Memory Posture
+
 - do: Treat the repo as the main operating system for agent work.
-- do: Keep plans, evidence, docs, code, and validation output as the source of truth.
-- do: Treat `## Must-Land Checklist` as the execution contract and keep `## Already-True Baseline`, `## Must-Land Checklist`, and `## Deferred Follow-Ons` separate.
-- do: Use repo-local checkpoints, explicit handoffs, evidence indexes, and resumable orchestration as the default memory system.
-- do: Keep context selective: load current scope, latest checkpoint, latest handoff, and relevant evidence; persist distilled findings, not raw session history.
-- improve first: Better checkpoint contents.
-- improve first: Better handoff notes.
-- improve first: Better evidence compaction.
-- improve first: Better validation and observability.
-- improve first: Fix plan quality before widening the memory system.
-- not yet: Do not add external retrieval just because work is long.
-- not yet: Do not add provider-thread persistence just because context is limited.
-- not yet: Do not move important working memory outside the repo while repo-local continuity is sufficient.
-- not yet: Do not treat extra memory systems as a substitute for better plans, checkpoints, and handoffs.
-- escalate when: Agents repeatedly miss important context even though it exists.
-- escalate when: Repo-local checkpoints and handoffs stop being enough.
-- escalate when: Important memory starts living outside the repo.
-- escalate when: You need one agent to search across many unrelated systems.
-- escalate when: You can point to repeated failures, not just a vague worry.
-- safe rule: If repo-local plans, checkpoints, and handoffs are enough, keep this design. If important context lives outside the repo and agents keep missing it, then consider external retrieval.
+- do: Keep plans, docs, validation output, PR context, and evidence in-repo.
+- do: Use the active or future plan as the current execution contract.
+- do: Keep future and active must-land items as explicit checkboxes with stable backticked IDs.
+- do: Prefer nearest live code examples before inventing new patterns.
+- improve first: Better active-plan quality and explicit must-land scopes.
+- improve first: Better PR summaries and evidence indexes.
+- improve first: Better generated context quality and canonical doc navigation.
+- improve first: Better validation coverage before widening workflow machinery.
+- improve first: Better canonical rule ownership before adding duplicate guidance.
+- not yet: Do not treat provider chats as durable working memory.
+- not yet: Do not create agent-specific policy forks to compensate for thin canonical docs.
+- escalate when: Canonical docs repeatedly fail to let a fresh agent resume safely.
+- escalate when: Important operational context is living only in chat or terminal scrollback.
+- escalate when: Manual promotion or review discipline keeps breaking because the contract is under-specified.
+- safe rule: Keep work state repo-local through clear docs, current plans, validation, and evidence.
 
 ## Execution Checklist
-- Read the current plan and latest checkpoint before editing.
+
+- Read `AGENTS.md`, `README.md`, the current plan when applicable, and the nearest live code before editing.
 - Translate the request into verifiable goals; for multi-step work, pair each step with its check.
-- Honor Implementation-Targets, Validation-Lanes, and Security-Approval exactly as written.
-- Write a structured result to ORCH_RESULT_PATH after each worker or reviewer session, or emit a single-line {"type":"orch_result","payload":...} stdout envelope if the sandbox prevents direct writes.
-- Move plans to validation only when every must-land item is checked.
+- Planning-only work stops in `docs/future/`.
+- Update canonical docs in the same slice when behavior, workflow, architecture, security, or reliability boundaries change.
+- Run the required validation commands and record evidence before closeout.
+
+Generated by `npm run context:compile`.

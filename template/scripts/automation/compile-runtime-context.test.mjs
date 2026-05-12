@@ -17,3 +17,15 @@ test('context:compile is deterministic when sources are unchanged', async () => 
   assert.equal(gitStatus.status, 0, String(gitStatus.stderr));
   assert.equal(String(gitStatus.stdout).trim(), '');
 });
+
+test('context:compile rejects output paths outside the repository', async () => {
+  const rootDir = await createTemplateRepo();
+  const result = runNode(
+    path.join(rootDir, 'scripts', 'automation', 'compile-runtime-context.mjs'),
+    ['--output', '../outside.md'],
+    rootDir
+  );
+
+  assert.equal(result.status, 1);
+  assert.match(String(result.stderr), /escapes repository root/);
+});

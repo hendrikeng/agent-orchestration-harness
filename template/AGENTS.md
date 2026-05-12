@@ -5,82 +5,74 @@ Owner: {{DOC_OWNER}}
 Last Updated: {{LAST_UPDATED_ISO_DATE}}
 Source of Truth: This document delegates to linked canonical docs.
 
-This file is the agent/human entrypoint map for repository behavior.
+This file is the agent and human entrypoint map for repository behavior.
 If instructions conflict, this file is the behavioral priority entrypoint.
 
 ## Operating Model
 
 - Docs-first minimal: this file is a concise map, not an execution playbook.
-- Humans define intent, constraints, and acceptance criteria.
-- Agents execute scoped tasks using repository-local docs, code, and checks.
-- Continuous docs hygiene is required through repository checks.
-- The default workflow is: plan futures, then grind ready futures through the flat queue in sequence.
+- Humans define scope, constraints, owners, and acceptance criteria.
+- Agents execute scoped tasks using repo-local docs, code, and checks.
+- Non-trivial work is planned in `docs/future/` before implementation.
+- Promotion, execution, review, and closeout are repo-local.
 
 ## Agent Handout
 
-- Treat the repo as the main operating system for agent work.
-- Keep plans, evidence, docs, code, and validation output as the source of truth.
-- Treat `## Must-Land Checklist` as the execution contract and keep `## Already-True Baseline`, `## Must-Land Checklist`, and `## Deferred Follow-Ons` separate.
-- Use repo-local checkpoints, explicit handoffs, evidence indexes, and resumable orchestration as the default memory system.
-- Keep context selective: load current scope, latest checkpoint, latest handoff, and relevant evidence; persist distilled findings instead of raw transcript history.
-- Default completion behavior is one atomic git commit per finished slice before the queue advances.
-- Do not add external retrieval, provider-thread persistence, or off-repo working memory just because work is long or context is limited.
-- Consider bigger memory changes only when repeated failures show the current repo-local checkpoint model is insufficient.
+- Treat the repo as the operating system for engineering work.
+- Load the current scope, relevant docs, and nearest live code before editing.
+- Translate the request into acceptance criteria and the smallest proof that would make the result trustworthy.
+- Keep plans, docs, validation output, PR context, and evidence in-repo.
+- Use one executable slice per plan file.
+- Keep future and active `## Must-Land Checklist` items as explicit checkboxes with stable backticked IDs.
+- Do not invent product behavior, schema, architecture, or workflow unsupported by code, docs, or explicit user intent.
+- Agent-specific adapter files are subordinate to this file and canonical docs.
 
 ## Default Read Order
 
 For implementation work, inspect live repo surfaces before planning from docs:
-- Nearest live route, component, service, API handler, or domain module.
-- Shared UI primitives, helpers, repository abstractions, adapters, and validation used by that surface.
-- Related queries, migrations, schemas, tests, constants, and generated types.
-- Repo-local docs only when code does not explain intent, workflow, or acceptance criteria.
 
-Prefer established local patterns over new abstractions. If no strong example exists, stop and ask before inventing a new repository-wide pattern.
+- nearest live route, component, service, API handler, job, script, or domain module
+- shared UI primitives, helpers, repository abstractions, adapters, and validation used by that surface
+- related queries, migrations, schemas, tests, constants, and generated types
+- repo-local docs when code does not explain intent, workflow, or acceptance criteria
+
+Prefer established local patterns over new abstractions. If no strong example exists, stop and ask before inventing a repository-wide pattern.
 
 ## Intent Precedence
 
 - Explicit user intent is binding.
-- In normal/direct Codex sessions (outside orchestrator `run`/`resume`), follow user intent immediately.
-- If the session is switched to plan mode, treat it as planning-only unless the user explicitly asks to implement, execute, or promote the plan.
-- If a user asks for planning-only work (for example: "plan", "outline", "prepare for promotion", "no implementation yet"), do not modify source or test files.
-- Planning-only means stop after creating or updating the future slice output in `docs/future/`; do not continue into code, test, or runtime-file edits just because the implementation seems straightforward.
-- For planning-only requests, work in `docs/future/`, create or update an executable future slice immediately, and set `Status: ready-for-promotion` when the plan is decision-complete.
-- Planning outputs must separate `## Already-True Baseline`, `## Must-Land Checklist`, and `## Deferred Follow-Ons` so executable scope is explicit before promotion.
-- Future authoring is flat by default: one future file equals one executable slice. Use multiple future files plus `Dependencies` when the work is larger than one slice.
-- Do not introduce program-parent plans, child-slice generation, `Execution-Scope`, `Authoring-Intent`, or `Parent-Plan-ID` workflow.
-- Start implementation only when the user explicitly asks to implement or promote/execute the plan. Finishing a future slice is not implied permission to begin coding.
-- Treat `docs/ops/automation/LITE_QUICKSTART.md` as the canonical reference for this day-planning / later-grind workflow.
+- Planning-only work belongs in `docs/future/`; do not edit product code for planning-only requests.
+- Implementation begins only when the user asks to execute a slice or make a direct change.
+- Small, isolated, low-risk fixes may use the `fix/*` lane when the PR is enough review evidence.
+- High-risk workflow, harness, release, governance, environment, identity, payment, database, security, and privileged-write paths require planned closeout even if they start small.
+- If direct work stops being small, isolated, or low risk, stop implementation and promote or create a future plan before continuing.
 
 ## Core Map
 
-Start here, then follow linked source-of-truth docs:
 - Platform scope/status: `README.md`
-- Architecture quick entrypoint: `ARCHITECTURE.md`
-- Canonical docs coverage manifest: `docs/MANIFEST.md`
+- Architecture entrypoint: `ARCHITECTURE.md`
 - Documentation index: `docs/README.md`
-- Governance policy (detailed): `docs/governance/RULES.md`
-- Policy manifest (runtime source): `docs/governance/policy-manifest.json`
+- Canonical docs manifest: `docs/MANIFEST.md`
 - Golden principles: `docs/governance/GOLDEN-PRINCIPLES.md`
+- Governance policy: `docs/governance/RULES.md`
+- Machine-readable policy: `docs/governance/policy-manifest.json`
+- Project gate contract: `docs/governance/project-gates.json`
+- Agent hardening: `docs/agent-hardening/README.md`
 - Quality scorecard: `docs/QUALITY_SCORE.md`
-- Design docs: `docs/design-docs/README.md`
 - Engineering invariants: `docs/design-docs/ENGINEERING-INVARIANTS.md`
 - UI standards: `docs/design-docs/UI-STANDARDS.md`
 - Frontend standards: `docs/FRONTEND.md`
 - Backend standards: `docs/BACKEND.md`
-- Agent hardening policy map: `docs/agent-hardening/README.md`
-- Memory and context policy: `docs/agent-hardening/MEMORY_CONTEXT.md`
+- Security: `docs/SECURITY.md`
+- Reliability: `docs/RELIABILITY.md`
 - Git safety: `docs/design-docs/GIT-SAFETY.md`
-- Plan lifecycle (non-trivial changes): `docs/PLANS.md`
-- Product specs index: `docs/product-specs/README.md`
-- Product state snapshot: `docs/product-specs/CURRENT-STATE.md`
+- Plan lifecycle: `docs/PLANS.md`
 - Execution plans: `docs/exec-plans/README.md`
-- Ops automation conveyor: `docs/ops/automation/README.md`
-- Runtime role contract: `docs/ops/automation/ROLE_ORCHESTRATION.md`
-- Lite lane onboarding: `docs/ops/automation/LITE_QUICKSTART.md`
-- Automation outcomes scorecard: `docs/ops/automation/OUTCOMES.md`
-- GitHub interop mapping: `docs/ops/automation/INTEROP_GITHUB.md`
-- Provider compatibility contract: `docs/ops/automation/PROVIDER_COMPATIBILITY.md`
-- Generated runtime context snapshot: `docs/generated/AGENT-RUNTIME-CONTEXT.md`
+- Engineering workflow: `docs/ops/automation/README.md`
+- API operations: `docs/ops/api/README.md`
+- Release operations: `docs/ops/releases/README.md`
+- Manual queue workflow: `docs/ops/automation/LITE_QUICKSTART.md`
+- Generated runtime context: `docs/generated/AGENT-RUNTIME-CONTEXT.md`
 
 ## Non-Negotiables
 
@@ -88,8 +80,21 @@ Start here, then follow linked source-of-truth docs:
 - Server-side authority for `{{SERVER_AUTHORITY_BOUNDARY_SET}}`.
 - No fake production success-path behavior.
 - Shared contracts and shared UI primitives are canonical where applicable.
-- Agent hardening policy in `docs/agent-hardening/*` is canonical and mandatory.
+- Agent hardening policy in `docs/agent-hardening/*` is mandatory.
 - `{{MONEY_AND_NUMERIC_RULE}}`
+
+## Engineering Quality Bar
+
+Every non-trivial code change should be reviewable as production engineering, not just a working patch:
+
+- Behavior is grounded in live code, schema, docs, or explicit user intent.
+- The data contract is explicit where data enters, changes trust level, or becomes user-visible.
+- Ownership is clear across route control flow, shared logic, data access, UI primitives, scripts, jobs, and services.
+- Failure states are designed, not incidental.
+- The change avoids unnecessary abstraction, dead code, duplicate helpers, and wrappers that hide responsibility.
+- Validation is proportional to risk and names the exact commands, tests, screenshots, manual checks, or evidence used.
+- General rules live once in their canonical owner; supporting references and agent adapters summarize or link rather than forking policy.
+- If the work cannot meet this bar in one slice, split the follow-up instead of landing a broad partially finished refactor.
 
 ## Critical Domain Invariants
 
@@ -105,60 +110,41 @@ Start here, then follow linked source-of-truth docs:
 - {{DOMAIN_INVARIANT_3A}}
 - {{DOMAIN_INVARIANT_3B}}
 
-## Doc Naming Convention
-
-- Harness-defined canonical framework docs under `docs/` use uppercase basenames with lowercase `.md` (for example `docs/MANIFEST.md`, `docs/governance/RULES.md`, `docs/product-specs/CURRENT-STATE.md`).
-- Folder entrypoints remain `README.md`.
-- Newly created repo-local docs should stay lowercase by default unless they are explicitly promoted into the canonical harness contract.
-- Operational evidence, dated plans, generated vendor/reference captures, and other evolving repo-local docs remain lowercase unless a repo deliberately standardizes them.
-
 ## Documentation Contract
 
-Any change affecting architecture boundaries, critical invariants,
-security/compliance domains, or user-visible behavior must update relevant canonical docs under `docs/`.
+Any change affecting architecture boundaries, critical invariants, team workflow, security, reliability, or user-visible behavior must update relevant canonical docs under `docs/`.
 Update root `README.md` only when the change affects top-level product scope, stack, workflow, architecture, commands, or the major capability map.
 Detailed behavior snapshots, delivery history, and slice-level product changes belong in `docs/product-specs/CURRENT-STATE.md`, relevant domain docs, completed plans, and evidence indexes.
 
 Docs are part of done.
-
-## Architecture Contract
-
-- Follow `ARCHITECTURE.md` and `docs/governance/architecture-rules.json`.
-- Respect module and layer dependency direction.
-- Do not bypass CI architecture checks.
-
-## Security and Data Safety
-
-- Treat inbound integration data as untrusted.
-- Ensure idempotency/retry safety where external callbacks exist.
-- Enforce boundary checks server-side for sensitive operations.
 
 ## Git and File Safety
 
 - Canonical policy location: `docs/design-docs/GIT-SAFETY.md`.
 - Never edit `.env` or environment variable files.
 - Never run destructive git/file commands without explicit written instruction.
-- Do not use `git stash` unless explicitly requested in-thread.
-- Do not switch branches or modify git worktrees unless explicitly requested in-thread.
-- Treat atomic commits as slice isolation inside one checkout, not as a coordination mechanism for multiple developers on one shared branch.
-- For team work, prefer short-lived slice branches and normal PR merges; use a temporary initiative branch only for larger coordinated rollouts that cannot land safely in partial form.
+- Do not use `git stash` unless explicitly requested.
+- Do not switch branches or modify git worktrees unless explicitly requested.
+- Treat atomic commits as slice isolation, not as team coordination on shared branches.
 
 ## Test and Validation Expectations
 
-- Runtime context generation is mandatory: `npm run context:compile`.
+- Runtime context generation: `npm run context:compile`.
+- Project gate declaration: `npm run project:gates:verify`.
 - Iteration profile: `npm run verify:fast`.
 - Merge profile: `npm run verify:full`.
-- Queue and metadata hygiene: `npm run plans:verify`, `npm run automation:audit`, `npm run harness:verify`.
+- Queue and metadata hygiene: `npm run plans:verify`, `npm run harness:verify`.
 - Canonical verification policy lives in `docs/governance/RULES.md`.
-- Add/adjust tests for behavior changes.
-- Every bug fix needs a regression test.
-- Critical flows require focused coverage.
-- If required dependencies/tools are missing, install via the repo-defined package manager and rerun the exact command once.
+- Add or adjust tests for behavior changes when a stable test surface exists.
+- Prefer a regression test for bug fixes.
+- Critical flows require focused coverage or explicit evidence when automation is not yet available.
 
 ## If Unsure
 
-Do not guess. Stop, inspect, and apply the safest explicit change.
+Do not guess. Inspect the nearest live implementation and apply the safest explicit change.
 
-## Repo-Specific Extensions
-
-- Put repo-specific domain constraints in `docs/product-specs/CURRENT-STATE.md` and domain docs.
+Before closing a slice:
+- remove unused imports, props, variables, and one-off helpers introduced during iteration
+- prefer existing shared utilities and components over near-duplicate local helpers
+- inline simple one-use helpers when that makes the flow easier to read
+- remove wrappers that do not add layout, semantics, or logic

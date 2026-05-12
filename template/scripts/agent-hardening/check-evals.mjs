@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { resolveSafeRepoPath } from '../automation/lib/repo-paths.mjs';
 
 const rootDir = process.cwd();
 const configPath = path.join(rootDir, 'docs', 'agent-hardening', 'evals.config.json');
@@ -81,36 +82,6 @@ function suiteRequirementEntry(raw) {
   fail('Each requiredSuites entry must be a string or object with an id.');
 }
 
-function validateSuites(report, requiredSuites, label) {
-  if (!Array.isArray(report.suites) || report.suites.length === 0) {
-    fail(`${label} report field 'suites' must be a non-empty array.`);
-  }
-  const suitesById = new Map();
-  for (const suite of report.suites) {
-    if (!isObject(suite)) {
-      fail(`Each ${label} report suite entry must be an object.`);
-    }
-    const id = String(suite.id ?? '').trim();
-    const status = String(suite.status ?? '').trim().toLowerCase();
-    if (!id || !status) {
-      fail(`Each ${label} report suite must include id and status.`);
-    }
-    suitesById.set(id, status);
-  }
-  for (const rawRequirement of requiredSuites) {
-    const requirement = suiteRequirementEntry(rawRequirement);
-    const observed = suitesById.get(requirement.id);
-    if (!observed) {
-      fail(`Required ${label} suite is missing from report: '${requirement.id}'.`);
-    }
-    if (observed !== requirement.status) {
-      fail(
-        `${label} suite '${requirement.id}' status '${observed}' does not satisfy required status '${requirement.status}'.`
-      );
-    }
-  }
-}
-
 async function main() {
   const templateMode = await isTemplateMode();
   if (!(await exists(configPath))) {
@@ -127,12 +98,18 @@ async function main() {
     fail("Config field 'reportPath' is required.");
   }
 
-  const reportAbs = path.join(rootDir, reportRel);
-  if (!(await exists(reportAbs))) {
+  let reportPath;
+  try {
+    reportPath = resolveSafeRepoPath(rootDir, reportRel, 'Eval report path');
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
+
+  if (!(await exists(reportPath.abs))) {
     fail(`Missing eval report file: ${reportRel}`);
   }
 
-  const report = parseJson(await fs.readFile(reportAbs, 'utf8'), reportAbs);
+  const report = parseJson(await fs.readFile(reportPath.abs, 'utf8'), reportPath.abs);
   if (!isObject(report)) {
     fail('Eval report must be a JSON object.');
   }
@@ -293,84 +270,6 @@ async function main() {
         fail(`Eval evidence path does not exist: ${evidenceRel}`);
       }
     }
-  }
-
-  const continuityReportRel = String(config.continuityReportPath ?? '').trim();
-  if (continuityReportRel) {
-    const continuityReportAbs = path.join(rootDir, continuityReportRel);
-    if (!(await exists(continuityReportAbs))) {
-      fail(`Missing continuity eval report file: ${continuityReportRel}`);
-    }
-    const continuityReport = parseJson(await fs.readFile(continuityReportAbs, 'utf8'), continuityReportAbs);
-    if (!isObject(continuityReport)) {
-      fail('Continuity eval report must be a JSON object.');
-    }
-    const continuityGeneratedAt = toIsoDate(continuityReport.generatedAtUtc);
-    if (!continuityGeneratedAt) {
-      fail(`Continuity eval report generatedAtUtc is invalid: ${String(continuityReport.generatedAtUtc)}`);
-    }
-    const continuityAgeDays = daysBetween(continuityGeneratedAt, new Date());
-    if (continuityAgeDays < 0) {
-      fail(`Continuity eval report generatedAtUtc is in the future: ${String(continuityReport.generatedAtUtc)}`);
-    }
-    if (continuityAgeDays > maxAgeDays) {
-      fail(`Continuity eval report is stale (${continuityAgeDays} days old, max ${maxAgeDays}).`);
-    }
-    const continuitySummary = continuityReport.summary;
-    if (!isObject(continuitySummary)) {
-      fail("Continuity eval report field 'summary' must be an object.");
-    }
-    const continuityPassRate = Number(continuitySummary.passRate);
-    const continuityMinimumPassRate = Number(config.continuityMinimumPassRate ?? minimumPassRate);
-    if (!Number.isFinite(continuityPassRate) || continuityPassRate < continuityMinimumPassRate) {
-      fail(
-        `Continuity eval passRate ${continuityPassRate.toFixed(3)} is below minimum ${continuityMinimumPassRate.toFixed(3)}.`
-      );
-    }
-    validateSuites(
-      continuityReport,
-      Array.isArray(config.requiredContinuitySuites) ? config.requiredContinuitySuites : [],
-      'continuity eval'
-    );
-  }
-
-  const resilienceReportRel = String(config.resilienceReportPath ?? '').trim();
-  if (resilienceReportRel) {
-    const resilienceReportAbs = path.join(rootDir, resilienceReportRel);
-    if (!(await exists(resilienceReportAbs))) {
-      fail(`Missing resilience eval report file: ${resilienceReportRel}`);
-    }
-    const resilienceReport = parseJson(await fs.readFile(resilienceReportAbs, 'utf8'), resilienceReportAbs);
-    if (!isObject(resilienceReport)) {
-      fail('Resilience eval report must be a JSON object.');
-    }
-    const resilienceGeneratedAt = toIsoDate(resilienceReport.generatedAtUtc);
-    if (!resilienceGeneratedAt) {
-      fail(`Resilience eval report generatedAtUtc is invalid: ${String(resilienceReport.generatedAtUtc)}`);
-    }
-    const resilienceAgeDays = daysBetween(resilienceGeneratedAt, new Date());
-    if (resilienceAgeDays < 0) {
-      fail(`Resilience eval report generatedAtUtc is in the future: ${String(resilienceReport.generatedAtUtc)}`);
-    }
-    if (resilienceAgeDays > maxAgeDays) {
-      fail(`Resilience eval report is stale (${resilienceAgeDays} days old, max ${maxAgeDays}).`);
-    }
-    const resilienceSummary = resilienceReport.summary;
-    if (!isObject(resilienceSummary)) {
-      fail("Resilience eval report field 'summary' must be an object.");
-    }
-    const resiliencePassRate = Number(resilienceSummary.passRate);
-    const resilienceMinimumPassRate = Number(config.resilienceMinimumPassRate ?? minimumPassRate);
-    if (!Number.isFinite(resiliencePassRate) || resiliencePassRate < resilienceMinimumPassRate) {
-      fail(
-        `Resilience eval passRate ${resiliencePassRate.toFixed(3)} is below minimum ${resilienceMinimumPassRate.toFixed(3)}.`
-      );
-    }
-    validateSuites(
-      resilienceReport,
-      Array.isArray(config.requiredResilienceSuites) ? config.requiredResilienceSuites : [],
-      'resilience eval'
-    );
   }
 
   console.log(

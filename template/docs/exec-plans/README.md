@@ -63,9 +63,25 @@ Every active or completed plan must also include:
 2. Promote ready future slices into `active/`, or create an active plan directly for a tiny low-risk manual fix.
 3. Validate plan metadata with `npm run plans:verify`.
 4. Execute one active slice at a time.
-5. Route `low` risk through `worker`; route `medium` and `high` through `worker -> reviewer`.
+5. Review medium and high risk changes before treating them as complete.
 6. Run `npm run verify:fast` during implementation and `npm run verify:full` before completion.
 7. Move completed plans to `completed/`, update `Done-Evidence`, and curate a compact evidence index under `docs/exec-plans/evidence-index/`.
 8. Keep current, high-signal active evidence under `docs/exec-plans/active/evidence/` and keep tech-debt references current.
 
-Do not use weak acceptance wording such as `at minimum`. If a change is too large for one plan, split it into multiple future slices linked by `Dependencies` instead of reintroducing parent-plan orchestration.
+Do not use weak acceptance wording such as `at minimum`. If a change is too large for one plan, split it into multiple future slices linked by `Dependencies`.
+
+## Evidence Contract
+
+- Active evidence captures current decision state, failed checks, blockers, and latest validation.
+- Completed evidence indexes capture durable proof after closure.
+- Evidence must be specific: command, result, artifact path, commit or run reference, and residual risk where applicable.
+- Do not store secrets, raw credentials, private payloads, or sensitive user data in plan evidence.
+- If validation cannot be automated yet, record the manual check, reviewer, observed result, and follow-up automation path.
+
+## Scope Discipline
+
+- `## Already-True Baseline` is not a wish list; it contains facts verified before the slice starts.
+- `## Must-Land Checklist` is the completion contract and should contain only work required for this slice.
+- `## Deferred Follow-Ons` keeps broader target state visible without turning it into hidden acceptance criteria.
+- A must-land item is too broad if it cannot be mapped to a concrete artifact and validation result.
+- A plan is too broad if multiple owners, unrelated surfaces, or independent release risks are required to make progress.

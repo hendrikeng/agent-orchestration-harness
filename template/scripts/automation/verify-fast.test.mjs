@@ -13,7 +13,6 @@ test('verify-fast dry-run lists the flat queue safety checks', async () => {
   assert.match(stdout, /compile-runtime-context/);
   assert.match(stdout, /check-plan-metadata/);
   assert.match(stdout, /check-harness-alignment/);
-  assert.doesNotMatch(stdout, /verify-orchestration-state/);
   assert.doesNotMatch(stdout, /check-performance-budgets/);
 });
 
@@ -30,13 +29,13 @@ test('verify-fast adds architecture verification when architecture files changed
   assert.match(String(result.stdout), /check-dependencies/);
 });
 
-test('verify-fast performs plan reference repair during orchestrated validation', async () => {
+test('verify-fast can scope plan metadata verification to one plan', async () => {
   const rootDir = await createTemplateRepo();
   const result = runNode(
     path.join(rootDir, 'scripts', 'automation', 'verify-fast.mjs'),
     ['--dry-run'],
     rootDir,
-    { ORCH_PLAN_ID: 'red-inbox' }
+    { VERIFY_PLAN_ID: 'red-inbox' }
   );
 
   assert.equal(result.status, 0, String(result.stderr));

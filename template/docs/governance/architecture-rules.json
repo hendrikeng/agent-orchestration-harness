@@ -1,4 +1,6 @@
 {
+  "schemaVersion": 1,
+  "description": "Architecture verification config. Replace placeholders during adoption with real project tags, import boundaries, and optional graph checks.",
   "checks": [
     {
       "type": "nx_dep_constraints",

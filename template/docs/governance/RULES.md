@@ -20,6 +20,7 @@ Source of Truth: This document.
 - Harness-defined canonical framework docs under `docs/` use uppercase basenames with lowercase `.md`; folder entrypoints remain `README.md`, and newly created repo-local docs stay lowercase unless explicitly promoted into the canonical harness contract.
 - Canonical docs must remain environment-agnostic: no personal machine paths, hostnames, credentials, or private runbooks.
 - `docs/governance/policy-manifest.json` is the machine-readable policy source for runtime context compilation.
+- `docs/governance/project-gates.json` is the machine-readable source for real project-specific lint, typecheck, test, build, migration, browser, release, and deploy gates.
 
 ## Planning and Scope
 
@@ -53,6 +54,31 @@ Source of Truth: This document.
 - Prefer the smallest implementation that satisfies the must-land checklist, and keep every changed line traceable to the user request, active plan, or required validation.
 - State material assumptions when intent has multiple plausible interpretations; ask or stop rather than silently choosing a risky path.
 
+## Project Gate Discipline
+
+- Every adopted project must declare real lint, typecheck, unit-test, and build gates or fail bootstrap verification.
+- Optional gates such as integration tests, migration integrity, browser smoke, security audit, release verification, and deployment verification must be either wired to a real command or marked `deferred`/`not-applicable` with a concrete rationale.
+- Gate commands must call the real project toolchain; no no-op commands, recursive aggregate commands, or unresolved placeholders.
+- `verify:fast` runs the fast project gates, and `verify:full` runs the full project gates.
+- Gate status must be truthful. A missing test harness is `deferred`, not a fake required command.
+- Deployment, migration, and release gates must be added before the project treats those surfaces as production-ready.
+
+## Policy Surface Model
+
+- Live canonical policy can define engineering rules: root canonical Markdown, top-level docs, agent hardening, architecture, design docs, governance, ops workflow docs, product-state docs, UI docs, machine-readable governance, and harness scripts/checks.
+- Supporting local guidance is subordinate: feature references and agent/provider adapter entrypoints may summarize or link, but they do not override canonical docs.
+- Historical evidence is audit material: completed plans and evidence indexes may be corrected for metadata and links, but they are not rewritten into current policy.
+- Generated artifacts are rebuilt from canonical sources; do not hand-edit generated outputs to add policy.
+- When improving a rule, tighten the canonical owner first, then update generated context and enforcement checks if the rule is machine-readable.
+- Machine-readable config must satisfy its adjacent schema when one exists.
+- Schema changes and verifier changes belong in the same slice as config shape changes.
+
+## Exception Discipline
+
+- Exceptions must name owner, reason, scope, expiry, and follow-up.
+- Exceptions must live in plans, evidence indexes, or governance config; they must not live only in chat or PR prose.
+- Expired exceptions block completion until resolved, renewed with justification, or converted into an explicit future slice.
+
 ## Verification Profiles
 
 - Fast iteration profile: `npm run verify:fast`
@@ -66,4 +92,5 @@ Source of Truth: This document.
   - `node ./scripts/agent-hardening/check-evals.mjs`
   - `node ./scripts/automation/check-harness-alignment.mjs`
   - `node ./scripts/automation/check-plan-metadata.mjs`
+  - `node ./scripts/automation/check-project-gates.mjs`
 - Relevant domain tests remain required for changed behavior.

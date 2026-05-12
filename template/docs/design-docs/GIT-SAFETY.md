@@ -3,7 +3,7 @@
 Status: canonical
 Owner: {{DOC_OWNER}}
 Last Updated: {{LAST_UPDATED_ISO_DATE}}
-Source of Truth: docs/design-docs/GIT-SAFETY.md
+Source of Truth: This document.
 
 ## File and Git Safety Rules
 
@@ -23,6 +23,10 @@ Source of Truth: docs/design-docs/GIT-SAFETY.md
 - One logical change per commit; no mixed concerns.
 - Do not amend commits unless explicitly approved in this conversation.
 - For multi-line GitHub issue/PR comments via `gh`, use heredoc (`-F - <<'EOF'`) to preserve newlines and avoid shell escaping corruption.
+- Do not rewrite, rebase, squash, or force-push shared history unless explicitly requested and the branch owner is known.
+- Do not push broad dirty worktree changes just because they are present; stage only the files that belong to the current slice.
+- If the worktree is dirty before you start, inspect relevant paths and treat unrelated changes as user-owned.
+- Generated files may be committed only when they are expected artifacts for the same slice and their generator was run intentionally.
 
 ## Team Git Workflow
 
@@ -34,3 +38,18 @@ Source of Truth: docs/design-docs/GIT-SAFETY.md
 - Merge slice branches back through normal review and verification instead of using `git stash` or ad hoc worktree juggling.
 - Example rollout shape: `main -> feature/app-redesign -> feature/app-redesign-shell`, `feature/app-redesign-nav`, `feature/app-redesign-mobile`.
 - If multiple slices would churn the same files heavily, assign ownership and land the shared shell first before parallel follow-on slices branch from that updated baseline.
+
+## Commit Readiness
+
+- Confirm the staged diff contains only the intended files.
+- Confirm validation commands and evidence match the changed surface.
+- Use a scoped commit message that names the durable change, not the tool that made it.
+- Keep implementation, generated artifacts, docs, and tests together only when they prove the same slice.
+- Split unrelated cleanup, formatting, or policy edits into separate commits.
+
+## Recovery Rules
+
+- If a command changes unexpected files, stop and inspect before continuing.
+- If a merge or generated output conflicts with user-owned work, preserve the user-owned work and ask only when the safe path is not obvious.
+- If rollback is needed, use a forward corrective patch unless the user explicitly asks for a revert operation.
+- If a branch, index, or worktree state is ambiguous, report the exact state before taking further git actions.

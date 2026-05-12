@@ -76,27 +76,25 @@
       ]
     },
     {
-      "id": "autonomous_exec_plan_orchestration",
+      "id": "execution_plan_quality_workflow",
       "status": "implemented",
       "evidence": [
         "docs/ops/automation/README.md",
-        "docs/ops/automation/orchestrator.config.json",
-        "scripts/automation/orchestrator.mjs",
+        "docs/ops/automation/LITE_QUICKSTART.md",
+        "docs/QUALITY_SCORE.md",
         "scripts/automation/check-plan-metadata.mjs",
         "docs/governance/doc-checks.config.json",
         "package.json"
       ]
     },
     {
-      "id": "runtime_context_compaction_and_perf_proof",
+      "id": "runtime_context_and_quality_gates",
       "status": "implemented",
       "evidence": [
         "docs/governance/policy-manifest.json",
         "docs/governance/policy-manifest.schema.json",
         "docs/generated/AGENT-RUNTIME-CONTEXT.md",
-        "docs/generated/perf-comparison.json",
         "scripts/automation/compile-runtime-context.mjs",
-        "scripts/automation/collect-performance-baseline.mjs",
         "scripts/automation/verify-fast.mjs",
         "scripts/automation/verify-full.mjs",
         "package.json"

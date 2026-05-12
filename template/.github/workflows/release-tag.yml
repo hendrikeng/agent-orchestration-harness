@@ -1,0 +1,73 @@
+name: release-tag
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+permissions:
+  contents: write
+
+jobs:
+  tag-release:
+    name: Tag Release
+    if: >-
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Validate release identity
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_branch="${{ github.event.pull_request.head.ref }}"
+          release_title="${{ github.event.pull_request.title }}"
+
+          if [[ ! "$release_branch" =~ ^release/[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$ ]]; then
+            echo "Release branch must match release/YYYY.MM.DD.N, got: $release_branch" >&2
+            exit 1
+          fi
+
+          release_version="${release_branch#release/}"
+          expected_title="Release $release_version"
+
+          if [[ "$release_title" != "$expected_title" ]]; then
+            echo "Release PR title must be '$expected_title', got: $release_title" >&2
+            exit 1
+          fi
+
+          {
+            echo "version=$release_version"
+            echo "tag=v$release_version"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      - name: Create annotated release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="${{ steps.release.outputs.tag }}"
+          version="${{ steps.release.outputs.version }}"
+          merge_sha="${{ github.event.pull_request.merge_commit_sha }}"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "Tag already exists: $tag" >&2
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git tag -a "$tag" "$merge_sha" -m "Release $version"
+          git push origin "refs/tags/$tag"
