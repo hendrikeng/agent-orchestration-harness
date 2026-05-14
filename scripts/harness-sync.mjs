@@ -164,6 +164,11 @@ function isManaged(relativePath, manifest) {
   return patterns.some((pattern) => matchesManagedPattern(relativePath, pattern));
 }
 
+function isBootstrapOnly(relativePath, manifest) {
+  const patterns = Array.isArray(manifest?.bootstrapOnlyGlobs) ? manifest.bootstrapOnlyGlobs : [];
+  return patterns.some((pattern) => matchesManagedPattern(relativePath, pattern));
+}
+
 async function sha256(filePath) {
   const buffer = await fs.readFile(filePath);
   return createHash('sha256').update(buffer).digest('hex');
@@ -181,7 +186,7 @@ function gitHeadRevision() {
   return value || null;
 }
 
-async function collectSourceFiles(manifest) {
+async function collectSourceFiles(manifest, { includeBootstrapOnly = false } = {}) {
   const sourceRoot = path.join(rootDir, manifest.sourceRoot);
   const targetRoot = String(manifest.targetRoot ?? '.').trim() || '.';
   assertWithinDirectory(rootDir, sourceRoot, 'sourceRoot');
@@ -193,6 +198,9 @@ async function collectSourceFiles(manifest) {
       continue;
     }
     if (isExcluded(relFromSource, manifest)) {
+      continue;
+    }
+    if (isBootstrapOnly(relFromSource, manifest) && !includeBootstrapOnly) {
       continue;
     }
     const stat = await fs.stat(absPath);
@@ -387,10 +395,10 @@ async function removeRetiredManagedFiles(targetDir, sourceEntries, installedMani
   return removed.sort((left, right) => left.localeCompare(right));
 }
 
-async function installOrUpdate(targetDir, manifest, sourceEntries, installedManifest = null) {
-  const removed = await removeRetiredManagedFiles(targetDir, sourceEntries, installedManifest);
+async function installOrUpdate(targetDir, manifest, copyEntries, managedEntries, installedManifest = null) {
+  const removed = await removeRetiredManagedFiles(targetDir, managedEntries, installedManifest);
   const copied = [];
-  for (const entry of sourceEntries) {
+  for (const entry of copyEntries) {
     const sourcePath = path.join(rootDir, entry.sourcePath);
     const targetPath = path.join(targetDir, entry.targetPath);
     assertWithinDirectory(rootDir, sourcePath, `source file '${entry.sourcePath}'`);
@@ -399,7 +407,7 @@ async function installOrUpdate(targetDir, manifest, sourceEntries, installedMani
     await fs.copyFile(sourcePath, targetPath);
     copied.push(entry.targetPath);
   }
-  await writeDownstreamManifest(targetDir, manifest, sourceEntries);
+  await writeDownstreamManifest(targetDir, manifest, managedEntries);
   return { copied, removed };
 }
 
@@ -422,10 +430,13 @@ async function main() {
   }
   const jsonOutput = asBoolean(options.json, false);
   const sourceManifest = await readJson(sourceManifestPath);
-  const sourceEntries = await collectSourceFiles(sourceManifest);
+  const managedSourceEntries = await collectSourceFiles(sourceManifest);
+  const copySourceEntries = command === 'install'
+    ? await collectSourceFiles(sourceManifest, { includeBootstrapOnly: true })
+    : managedSourceEntries;
   const manifestState = await loadDownstreamManifest(targetDir, sourceManifest);
   const installedManifest = manifestState.valid ? manifestState.manifest : null;
-  const drift = await compareTarget(targetDir, sourceEntries, installedManifest);
+  const drift = await compareTarget(targetDir, managedSourceEntries, installedManifest);
 
   if (command === 'drift') {
     const payload = {
@@ -453,7 +464,13 @@ async function main() {
   }
 
   await fs.mkdir(targetDir, { recursive: true });
-  const writeResult = await installOrUpdate(targetDir, sourceManifest, sourceEntries, installedManifest);
+  const writeResult = await installOrUpdate(
+    targetDir,
+    sourceManifest,
+    copySourceEntries,
+    managedSourceEntries,
+    installedManifest
+  );
   const payload = {
     command,
     target: targetDir,

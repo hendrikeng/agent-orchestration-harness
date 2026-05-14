@@ -8,6 +8,10 @@
   "managedGlobs": [
     "**/*"
   ],
+  "bootstrapOnlyGlobs": [
+    "PLACEHOLDERS.md",
+    "package.scripts.fragment.json"
+  ],
   "excludeGlobs": [
     ".gitignore",
     "docs/ops/automation/harness-manifest.json"

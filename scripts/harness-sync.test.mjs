@@ -36,6 +36,30 @@ test('harness-sync install writes target files and downstream manifest', async (
   assert.equal(manifest.sourceManifest, 'distribution/harness-ownership-manifest.json');
   assert.equal(typeof manifest.sourceManifestSha256, 'string');
   assert.equal(manifest.sourceManifestSha256.length, 64);
+  assert.equal(
+    manifest.managedFiles.some((entry) => entry.targetPath === 'PLACEHOLDERS.md'),
+    false
+  );
+  assert.equal(
+    manifest.managedFiles.some((entry) => entry.targetPath === 'package.scripts.fragment.json'),
+    false
+  );
+  await fs.access(path.join(targetDir, 'PLACEHOLDERS.md'));
+  await fs.access(path.join(targetDir, 'package.scripts.fragment.json'));
+});
+
+test('harness-sync treats bootstrap helpers as removable after adoption', async () => {
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-bootstrap-only-'));
+  assert.equal(run(['install', '--target', targetDir]).status, 0);
+
+  await fs.rm(path.join(targetDir, 'PLACEHOLDERS.md'));
+  await fs.rm(path.join(targetDir, 'package.scripts.fragment.json'));
+
+  const result = run(['drift', '--target', targetDir, '--json', 'true']);
+  assert.equal(result.status, 0);
+  const payload = JSON.parse(String(result.stdout));
+  assert.equal(payload.missing.includes('PLACEHOLDERS.md'), false);
+  assert.equal(payload.missing.includes('package.scripts.fragment.json'), false);
 });
 
 test('harness-sync drift reports modified managed files', async () => {

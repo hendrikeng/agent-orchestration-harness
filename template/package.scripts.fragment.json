@@ -1,6 +1,7 @@
 {
   "scripts": {
     "bootstrap:verify": "bash ./scripts/bootstrap-verify.sh",
+    "bootstrap:cleanup": "node ./scripts/cleanup-bootstrap-artifacts.mjs",
     "context:compile": "node ./scripts/automation/compile-runtime-context.mjs",
     "docs:verify": "node ./scripts/docs/check-governance.mjs",
     "conformance:verify": "node ./scripts/check-article-conformance.mjs",

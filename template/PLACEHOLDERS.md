@@ -97,7 +97,7 @@ If a domain does not use billing/credits/payments, keep the placeholder explicit
 
 ## Validation Command
 
-Run this command in the initialized repository; result must be empty:
+Run this command in the initialized repository. It must report no unresolved placeholders:
 
 ```bash
 ./scripts/check-template-placeholders.sh
@@ -108,3 +108,5 @@ Then run:
 ```bash
 ./scripts/bootstrap-verify.sh
 ```
+
+This is a bootstrap-only guide. `bootstrap-verify.sh` runs `npm run bootstrap:cleanup` after verification; that final cleanup removes this file and `package.scripts.fragment.json` once placeholders are clear and package scripts have been merged.

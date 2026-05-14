@@ -67,6 +67,7 @@ Use `docs/MANIFEST.md` for the complete first-class documentation inventory.
 ## Enforcement and Quality Gates
 
 - Bootstrap verification after initial placeholder replacement: `./scripts/bootstrap-verify.sh`
+- Bootstrap helper cleanup: `npm run bootstrap:cleanup`
 - Placeholder check: `./scripts/check-template-placeholders.sh`
 - Runtime context build: `npm run context:compile`
 - Docs governance: `npm run docs:verify`

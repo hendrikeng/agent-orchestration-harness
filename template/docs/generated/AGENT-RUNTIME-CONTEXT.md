@@ -2,7 +2,7 @@
 
 Status: generated
 Owner: {{DOC_OWNER}}
-Last Updated: 2026-05-12
+Last Updated: 2026-05-14
 Source of Truth: Derived from AGENTS.md and docs/governance/policy-manifest.json.
 
 ## Mission

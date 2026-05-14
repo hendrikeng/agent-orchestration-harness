@@ -739,6 +739,7 @@ async function main() {
   await writeProjectGates(repoDir);
   await writeProductDocs(repoDir);
   await writePlanEvidence(repoDir);
+  runCommand(repoDir, 'npm run bootstrap:cleanup', { CI: '1' });
   commitReleaseSlice(repoDir);
 
   const commands = [

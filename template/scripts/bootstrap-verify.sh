@@ -9,5 +9,6 @@ cd "$REPO_ROOT"
 npm run context:compile
 npm run verify:fast
 npm run verify:full
+npm run bootstrap:cleanup
 
 echo "[bootstrap-verify] passed"

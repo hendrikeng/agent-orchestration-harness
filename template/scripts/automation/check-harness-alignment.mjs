@@ -6,6 +6,7 @@ const rootDir = process.cwd();
 const findings = [];
 
 const requiredScripts = new Map([
+  ['bootstrap:cleanup', 'node ./scripts/cleanup-bootstrap-artifacts.mjs'],
   ['context:compile', 'node ./scripts/automation/compile-runtime-context.mjs'],
   ['docs:verify', 'node ./scripts/docs/check-governance.mjs'],
   ['conformance:verify', 'node ./scripts/check-article-conformance.mjs'],

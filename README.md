@@ -46,7 +46,7 @@ Install from this blueprint repo:
 node ./scripts/harness-sync.mjs install --target /path/to/target-repo
 ```
 
-The install copies `template/` into the target repository root. After install, paths lose the `template/` prefix: `template/PLACEHOLDERS.md` becomes `PLACEHOLDERS.md`, `template/AGENTS.md` becomes `AGENTS.md`, and `template/docs/...` becomes `docs/...`. The sync manifest is written to `docs/ops/automation/harness-manifest.json`; downstream `.gitignore` is preserved.
+The install copies `template/` into the target repository root. After install, paths lose the `template/` prefix: `template/PLACEHOLDERS.md` becomes `PLACEHOLDERS.md`, `template/AGENTS.md` becomes `AGENTS.md`, and `template/docs/...` becomes `docs/...`. `PLACEHOLDERS.md` and `package.scripts.fragment.json` are bootstrap-only helpers: they are copied for the first adoption pass, but are not tracked as permanent harness-managed files. The sync manifest is written to `docs/ops/automation/harness-manifest.json`; downstream `.gitignore` is preserved.
 
 Then work inside the target repo:
 
@@ -55,6 +55,7 @@ Then work inside the target repo:
 3. Merge `package.scripts.fragment.json` into the target `package.json`.
 4. Replace `docs/governance/project-gates.json` with real lint, typecheck, test, build, database, browser, deploy, and security gates, or mark missing gates with a concrete rationale.
 5. Run `npm run harness:verify`, `npm run context:compile`, and `npm run verify:fast`.
+6. Run `npm run bootstrap:cleanup` after placeholders are replaced and package scripts are merged; this removes `PLACEHOLDERS.md` and `package.scripts.fragment.json`.
 
 ## Agent Quickstart Prompts
 
@@ -90,7 +91,7 @@ Approved. Execute the bootstrap decision packet in this installed target repo.
 
 Assume the template has already been installed into the current repository root. If AGENTS.md, PLACEHOLDERS.md, package.scripts.fragment.json, or docs/governance/project-gates.json are missing, stop and report that the template install step has not happened.
 
-1. Replace all {{...}} placeholders in installed files using the approved decision packet; keep PLACEHOLDERS.md as the placeholder inventory.
+1. Replace all {{...}} placeholders in installed files using the approved decision packet; use PLACEHOLDERS.md as the temporary placeholder inventory during this pass.
 2. Merge package.scripts.fragment.json into package.json without deleting unrelated existing project scripts.
 3. Wire docs/governance/project-gates.json to real project commands for lint, typecheck, unit tests, build, and any applicable integration, migration, browser, security, release, or deploy checks.
 4. Run ./scripts/check-template-placeholders.sh until no unresolved placeholders remain outside the documented inventory.
@@ -98,7 +99,8 @@ Assume the template has already been installed into the current repository root.
 6. Create or update exactly one executable future or active slice from the approved first-slice plan.
 7. Implement only that slice if execution approval includes implementation; otherwise stop after verified bootstrap and slice creation.
 8. Update current-state docs, architecture/standards docs, validation evidence, and completed-plan closeout where the executed change requires it.
-9. Run the strongest relevant verification available and report the exact commands and evidence.
+9. Run npm run bootstrap:cleanup to remove bootstrap-only helper files after placeholders are clear and package scripts are merged.
+10. Run the strongest relevant verification available and report the exact commands and evidence.
 
 Keep the work agent-portable: any capable coding agent must be able to resume from repository-local docs, plans, code, validation output, and evidence.
 ```

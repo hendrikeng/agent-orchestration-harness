@@ -166,6 +166,17 @@ async function assertPackageJsonDriftFails(repoDir) {
   }
 }
 
+async function assertBootstrapArtifactsRemoved(repoDir) {
+  for (const relativePath of ['PLACEHOLDERS.md', 'package.scripts.fragment.json']) {
+    try {
+      await fs.access(path.join(repoDir, relativePath));
+    } catch {
+      continue;
+    }
+    throw new Error(`Expected bootstrap artifact to be removed: ${relativePath}`);
+  }
+}
+
 async function assertPullRequestTemplatesMatchVerifier(repoDir) {
   const templates = [
     {
@@ -228,12 +239,15 @@ async function main() {
     'npm run harness:verify',
     'npm run plans:verify',
     'npm run context:compile',
-    'npm run verify:fast'
+    'npm run verify:fast',
+    'npm run bootstrap:cleanup',
+    'npm run harness:verify'
   ];
 
   for (const command of commands) {
     runCommand(repoDir, command, { CI: '1' });
   }
+  await assertBootstrapArtifactsRemoved(repoDir);
   await assertPackageJsonDriftFails(repoDir);
 
   console.log(`[template-smoke] passed (${toPosix(repoDir)})`);
