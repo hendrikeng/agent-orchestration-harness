@@ -5,7 +5,9 @@ import path from 'node:path';
 const rootDir = process.cwd();
 
 const requiredMarkdownFiles = [
+  'VISION.md',
   'AGENTS.md',
+  'docs/agent-hardening/AGENT_LOOP.md',
   'docs/agent-hardening/README.md',
   'docs/agent-hardening/EVALS.md',
   'docs/agent-hardening/OBSERVABILITY.md',
@@ -21,7 +23,22 @@ const requiredJsonFiles = [
 const requiredMetadataFields = ['Status', 'Owner', 'Last Updated', 'Source of Truth'];
 
 const requiredHeadings = {
+  'VISION.md': [
+    'Product Direction',
+    'Users And Outcomes',
+    'Non-Negotiables',
+    'Current Strategy',
+    'Decision Rules',
+    'Agent Loop Contract'
+  ],
   'AGENTS.md': ['Operating Model', 'Agent Handout', 'Core Map'],
+  'docs/agent-hardening/AGENT_LOOP.md': [
+    'Loop Contract',
+    'Loop Inputs',
+    'Checks That Can Say No',
+    'Evidence And Closeout',
+    'Stop Rules'
+  ],
   'docs/agent-hardening/README.md': ['Why This Exists', 'Canonical Documents', 'Enforcement'],
   'docs/agent-hardening/EVALS.md': [
     'Eval Lifecycle',

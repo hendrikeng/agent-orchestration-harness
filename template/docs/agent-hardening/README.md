@@ -9,13 +9,14 @@ Source of Truth: This document and linked docs in this folder.
 
 - Agent quality, safety, and recovery rules must be explicit enough for a fresh agent or reviewer to enforce.
 - Hardening policy is canonical from repository bootstrap and applies before project-specific runtime notes add local detail.
-- This folder defines stack-agnostic contracts for run control, evals, observability, tool use, and memory/context behavior.
+- This folder defines stack-agnostic contracts for the agent loop, run control, evals, observability, tool use, and memory/context behavior.
 - The harness must optimize for durable outcomes: correct code, auditable decisions, resumable work, and fast recovery after interruption.
 - Any agent workflow that cannot leave evidence, explain tool choices, or resume from repo-local context is not production-ready.
 - The blueprint is not an orchestration runtime. Runtime-native goals, background runs, subagents, handoffs, hooks, guardrails, and traces are useful execution machinery, but repo-local plans, docs, checks, and evidence remain the durable control plane.
 
 ## Canonical Documents
 
+- `docs/agent-hardening/AGENT_LOOP.md`
 - `docs/agent-hardening/EVALS.md`
 - `docs/agent-hardening/evals.config.json`
 - `docs/agent-hardening/OBSERVABILITY.md`
@@ -26,12 +27,12 @@ Source of Truth: This document and linked docs in this folder.
 
 ## Enforcement
 
-- Targeted policy checks: `npm run agent:verify` and `npm run eval:verify`.
+- Targeted policy checks: `npm run agent:loop`, `npm run agent:verify`, and `npm run eval:verify`.
 - Iteration profile: `npm run verify:fast`.
 - Merge profile: `npm run verify:full`.
 - Runtime context build: `npm run context:compile`.
 
-- `agent:verify` and `eval:verify` are required before merge.
+- `agent:loop`, `agent:verify`, and `eval:verify` are required before merge.
 - `eval:verify` gates generated eval freshness, required suite health, regression counts, and repository-local evidence.
 - `context:compile` must run whenever canonical docs, policy manifests, plan conventions, or hardening rules change.
 - High-risk changes must leave enough evidence for another agent to reproduce the decision path without relying on chat history.

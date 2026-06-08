@@ -9,9 +9,10 @@ Use execution plans for all implemented changes so intent, decisions, and rollou
 
 The canonical workflow is:
 
-1. Plan in `docs/future/`.
-2. Make future slices decision-complete.
-3. Promote ready futures through the flat queue in sequence.
+1. Read `VISION.md`, `AGENTS.md`, nearest live code, and relevant canonical docs.
+2. Plan in `docs/future/`.
+3. Make future slices decision-complete.
+4. Promote ready futures through the flat queue in sequence.
 
 ## Work Classes
 

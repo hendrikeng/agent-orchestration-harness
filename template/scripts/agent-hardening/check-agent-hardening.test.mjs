@@ -10,7 +10,22 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 const scriptPath = path.join(repoRoot, 'template', 'scripts', 'agent-hardening', 'check-agent-hardening.mjs');
 
 const markdownFiles = {
+  'VISION.md': [
+    'Product Direction',
+    'Users And Outcomes',
+    'Non-Negotiables',
+    'Current Strategy',
+    'Decision Rules',
+    'Agent Loop Contract'
+  ],
   'AGENTS.md': ['Operating Model', 'Agent Handout', 'Core Map'],
+  'docs/agent-hardening/AGENT_LOOP.md': [
+    'Loop Contract',
+    'Loop Inputs',
+    'Checks That Can Say No',
+    'Evidence And Closeout',
+    'Stop Rules'
+  ],
   'docs/agent-hardening/README.md': ['Why This Exists', 'Canonical Documents', 'Enforcement'],
   'docs/agent-hardening/EVALS.md': [
     'Eval Lifecycle',

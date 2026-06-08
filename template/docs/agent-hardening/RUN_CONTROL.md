@@ -7,6 +7,7 @@ Source of Truth: This document.
 
 ## Goal-Driven Run Control
 
+- Start each non-trivial run with the loop in `docs/agent-hardening/AGENT_LOOP.md`: vision, rules, code, plan, build, check, fix, evidence, close.
 - Treat a goal as the durable execution contract: user intent, acceptance criteria, constraints, validation path, current state, blockers, and completion evidence.
 - Prefer runtime-native goal, task, plan, session, trace, and background-run primitives when they improve reliability, but do not make any runtime session the repository source of truth.
 - Do not add a repo-local scheduler, custom agent chain, or orchestration daemon when runtime-native execution plus repo-local plans, checks, and evidence can carry the work.

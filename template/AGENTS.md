@@ -11,6 +11,7 @@ If instructions conflict, this file is the behavioral priority entrypoint.
 ## Operating Model
 
 - Docs-first minimal: this file is a concise map, not an execution playbook.
+- `VISION.md` defines durable product direction; this file defines repository operating rules.
 - Humans define scope, constraints, owners, and acceptance criteria.
 - Agents execute scoped tasks using repo-local docs, code, and checks.
 - Runtime-native goals, subagents, handoffs, hooks, guardrails, traces, and background runs are optional execution machinery, not harness requirements.
@@ -20,7 +21,8 @@ If instructions conflict, this file is the behavioral priority entrypoint.
 ## Agent Handout
 
 - Treat the repo as the operating system for engineering work.
-- Load the current scope, relevant docs, and nearest live code before editing.
+- Load `VISION.md`, the current scope, relevant docs, and nearest live code before editing.
+- Use the loop in `docs/agent-hardening/AGENT_LOOP.md`: vision, rules, code, plan, build, check, fix, evidence, close.
 - Translate the request into acceptance criteria and the smallest proof that would make the result trustworthy.
 - Keep plans, docs, validation output, PR context, and evidence in-repo.
 - Use one executable slice per plan file.
@@ -32,6 +34,7 @@ If instructions conflict, this file is the behavioral priority entrypoint.
 
 For implementation work, inspect live repo surfaces before planning from docs:
 
+- `VISION.md` and this `AGENTS.md`
 - nearest live route, component, service, API handler, job, script, or domain module
 - shared UI primitives, helpers, repository abstractions, adapters, and validation used by that surface
 - related queries, migrations, schemas, tests, constants, and generated types
@@ -51,6 +54,7 @@ Prefer established local patterns over new abstractions. If no strong example ex
 ## Core Map
 
 - Platform scope/status: `README.md`
+- Product vision: `VISION.md`
 - Architecture entrypoint: `ARCHITECTURE.md`
 - Documentation index: `docs/README.md`
 - Canonical docs manifest: `docs/MANIFEST.md`
@@ -59,6 +63,7 @@ Prefer established local patterns over new abstractions. If no strong example ex
 - Machine-readable policy: `docs/governance/policy-manifest.json`
 - Project gate contract: `docs/governance/project-gates.json`
 - Agent hardening: `docs/agent-hardening/README.md`
+- Agent loop: `docs/agent-hardening/AGENT_LOOP.md`
 - Agent run control: `docs/agent-hardening/RUN_CONTROL.md`
 - Quality scorecard: `docs/QUALITY_SCORE.md`
 - Engineering invariants: `docs/design-docs/ENGINEERING-INVARIANTS.md`
@@ -132,6 +137,7 @@ Docs are part of done.
 ## Test and Validation Expectations
 
 - Runtime context generation: `npm run context:compile`.
+- Agent loop contract: `npm run agent:loop`.
 - Project gate declaration: `npm run project:gates:verify`.
 - Iteration profile: `npm run verify:fast`.
 - Merge profile: `npm run verify:full`.

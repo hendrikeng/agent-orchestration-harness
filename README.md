@@ -17,6 +17,7 @@ Reusable blueprint for bootstrapping high-quality agent-assisted software projec
 ## Blueprint Principles
 
 - The repository is the operating system for engineering work.
+- `VISION.md` makes product direction explicit before agents enter plans or code.
 - Canonical docs define current product state, architecture, standards, planning, and quality gates.
 - Non-trivial work is planned as one executable slice before implementation.
 - Code quality is protected through small scope, explicit contracts, focused validation, reviewable evidence, and automated checks.
@@ -27,6 +28,7 @@ Reusable blueprint for bootstrapping high-quality agent-assisted software projec
 ## Start Here
 
 - [template/AGENTS.md](template/AGENTS.md)
+- [template/VISION.md](template/VISION.md)
 - [template/README.md](template/README.md)
 - [template/docs/PLANS.md](template/docs/PLANS.md)
 - [template/docs/QUALITY_SCORE.md](template/docs/QUALITY_SCORE.md)
@@ -68,7 +70,7 @@ This repository has just been initialized from the Agent Project Blueprint.
 We are inside the target repo now, and installed files may still contain {{...}} placeholders.
 Stay in planning mode. Do not edit files yet.
 
-Read AGENTS.md, PLACEHOLDERS.md, README.md, docs/PLANS.md, docs/QUALITY_SCORE.md, docs/governance/RULES.md, and the nearest existing code/package files if any.
+Read VISION.md, AGENTS.md, PLACEHOLDERS.md, README.md, docs/PLANS.md, docs/QUALITY_SCORE.md, docs/governance/RULES.md, and the nearest existing code/package files if any.
 
 Produce a bootstrap decision packet:
 1. define what the product does, who it serves, and which outcomes matter,
