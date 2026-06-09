@@ -24,12 +24,16 @@ const requiredMetadataFields = ['Status', 'Owner', 'Last Updated', 'Source of Tr
 
 const requiredHeadings = {
   'VISION.md': [
-    'Product Direction',
+    'Purpose',
     'Users And Outcomes',
-    'Non-Negotiables',
-    'Current Strategy',
-    'Decision Rules',
-    'Agent Loop Contract'
+    'Desired State',
+    'Loop Invariants',
+    'Drift Signals',
+    'Verification Gates',
+    'Memory Locations',
+    'Operating Strategy',
+    'Default Agent Loop',
+    'Escalation Rules'
   ],
   'AGENTS.md': ['Operating Model', 'Agent Handout', 'Core Map'],
   'docs/agent-hardening/AGENT_LOOP.md': [
