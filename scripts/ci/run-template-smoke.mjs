@@ -192,7 +192,8 @@ async function assertPullRequestTemplatesMatchVerifier(repoDir) {
     {
       path: '.github/PULL_REQUEST_TEMPLATE/release.md',
       headRef: 'release/2026.05.12.1',
-      baseRef: 'main'
+      baseRef: 'main',
+      title: 'Release 2026.05.12.1'
     }
   ];
 
@@ -201,6 +202,7 @@ async function assertPullRequestTemplatesMatchVerifier(repoDir) {
     const findings = validatePrContract({
       headRef: template.headRef,
       baseRef: template.baseRef,
+      title: template.title,
       body
     });
     if (findings.length > 0) {
@@ -239,6 +241,7 @@ async function main() {
     'npm run harness:verify',
     'npm run plans:verify',
     'npm run context:compile',
+    'npm run eval:refresh',
     'npm run verify:fast',
     'npm run bootstrap:cleanup',
     'npm run harness:verify'

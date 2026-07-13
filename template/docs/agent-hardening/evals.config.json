@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "reportPath": "docs/generated/evals-report.json",
-  "maxAgeDays": 7,
+  "freshnessMode": "content-addressed",
   "minimumPassRate": 0.98,
   "maxCriticalRegressions": 0,
   "maxHighRegressions": 0,

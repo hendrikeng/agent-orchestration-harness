@@ -27,13 +27,13 @@ Source of Truth: This document and linked docs in this folder.
 
 ## Enforcement
 
-- Targeted policy checks: `npm run agent:loop`, `npm run agent:verify`, and `npm run eval:verify`.
+- Targeted policy checks: `npm run agent:loop`, `npm run agent:verify`, `npm run eval:refresh`, and `npm run eval:verify`.
 - Iteration profile: `npm run verify:fast`.
 - Merge profile: `npm run verify:full`.
 - Runtime context build: `npm run context:compile`.
 
-- `agent:loop`, `agent:verify`, and `eval:verify` are required before merge.
-- `eval:verify` gates generated eval freshness, required suite health, regression counts, and repository-local evidence.
+- `agent:loop`, `agent:verify`, `eval:refresh`, and `eval:verify` are required before merge.
+- `eval:verify` gates content-addressed policy/fixture integrity, required suite health, regression counts, and repository-local evidence.
 - `context:compile` must run whenever canonical docs, policy manifests, plan conventions, or hardening rules change.
 - High-risk changes must leave enough evidence for another agent to reproduce the decision path without relying on chat history.
 - Exceptions require an owner, reason, expiry, and follow-up tracked in the relevant plan or evidence index.

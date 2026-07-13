@@ -52,8 +52,22 @@ test('bootstrap cleanup removes one-time helper files after scripts are merged',
 
   assert.equal(result.status, 0);
   assert.match(String(result.stdout), /removed PLACEHOLDERS\.md, package\.scripts\.fragment\.json/);
-  await assert.rejects(fs.access(path.join(rootDir, 'PLACEHOLDERS.md')));
-  await assert.rejects(fs.access(path.join(rootDir, 'package.scripts.fragment.json')));
+  for (const relative of [
+    'PLACEHOLDERS.md',
+    'package.scripts.fragment.json',
+    'scripts/bootstrap-verify.sh',
+    'scripts/bootstrap-verify.test.mjs',
+    'scripts/check-template-placeholders.mjs',
+    'scripts/check-template-placeholders.sh',
+    'scripts/check-template-placeholders.test.mjs',
+    'scripts/cleanup-bootstrap-artifacts.mjs',
+    'scripts/cleanup-bootstrap-artifacts.test.mjs'
+  ]) {
+    await assert.rejects(fs.access(path.join(rootDir, relative)));
+  }
+  const packageJson = JSON.parse(await fs.readFile(path.join(rootDir, 'package.json'), 'utf8'));
+  assert.equal(packageJson.scripts['bootstrap:verify'], undefined);
+  assert.equal(packageJson.scripts['bootstrap:cleanup'], undefined);
 });
 
 test('bootstrap cleanup prunes stale helper ownership from the downstream manifest', async () => {

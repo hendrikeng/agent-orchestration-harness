@@ -48,9 +48,11 @@ Source of Truth: This document.
 
 - Config source of truth: `docs/agent-hardening/evals.config.json`.
 - Generated report artifact: `docs/generated/evals-report.json`.
+- Refresh command: `npm run eval:refresh`.
 - Verifier command: `npm run eval:verify`.
 - Required report fields:
-  - `generatedAtUtc`
+  - `generatedAtUtc` (provenance only in content-addressed mode)
+  - `inputSha256` when `freshnessMode` is `content-addressed`
   - `summary.total`, `summary.passed`, `summary.failed`, `summary.passRate`
   - `regressions.criticalOpen`, `regressions.highOpen`
   - `suites[]` with `id`, `status`, `total`, `passed`, `failed`
@@ -60,7 +62,8 @@ Source of Truth: This document.
   - suite-level `evidence` and failure class counts when the runner supports them
   - links to incident, plan, PR, or evidence-index entries for accepted exceptions
 - Gate policy:
-  - Report freshness must satisfy `maxAgeDays`.
+  - Content-addressed reports must match the current config, policy docs, and failure fixtures; `npm run eval:refresh` updates the deterministic input hash without fabricating a new execution timestamp.
+  - Time-bound reports, when configured, must satisfy `maxAgeDays`.
   - Pass-rate must satisfy `minimumPassRate`.
   - Open critical/high regressions must be at or below configured maximums.
   - Required suite IDs/statuses must be present and valid.

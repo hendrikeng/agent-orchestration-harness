@@ -312,6 +312,7 @@ function validateDownstreamManifest(manifestState, sourceManifest) {
 }
 
 async function compareTarget(targetDir, sourceEntries, installedManifest = null) {
+  const exact = [];
   const missing = [];
   const modified = [];
   const managedSet = new Set();
@@ -324,6 +325,8 @@ async function compareTarget(targetDir, sourceEntries, installedManifest = null)
       const targetHash = await sha256(targetPath);
       if (targetHash !== entry.sha256) {
         modified.push(entry.targetPath);
+      } else {
+        exact.push(entry.targetPath);
       }
     } catch {
       missing.push(entry.targetPath);
@@ -341,6 +344,7 @@ async function compareTarget(targetDir, sourceEntries, installedManifest = null)
   }
 
   return {
+    exact: exact.sort((left, right) => left.localeCompare(right)),
     missing: missing.sort((left, right) => left.localeCompare(right)),
     modified: modified.sort((left, right) => left.localeCompare(right)),
     unexpectedManaged: unexpectedManaged.sort((left, right) => left.localeCompare(right))
@@ -431,9 +435,13 @@ async function main() {
   const jsonOutput = asBoolean(options.json, false);
   const sourceManifest = await readJson(sourceManifestPath);
   const managedSourceEntries = await collectSourceFiles(sourceManifest);
-  const copySourceEntries = command === 'install'
-    ? await collectSourceFiles(sourceManifest, { includeBootstrapOnly: true })
-    : managedSourceEntries;
+  const allSourceEntries = await collectSourceFiles(sourceManifest, { includeBootstrapOnly: true });
+  const managedTargets = new Set(managedSourceEntries.map((entry) => entry.targetPath));
+  const bootstrapOnly = allSourceEntries
+    .map((entry) => entry.targetPath)
+    .filter((targetPath) => !managedTargets.has(targetPath))
+    .sort((left, right) => left.localeCompare(right));
+  const copySourceEntries = command === 'install' ? allSourceEntries : managedSourceEntries;
   const manifestState = await loadDownstreamManifest(targetDir, sourceManifest);
   const installedManifest = manifestState.valid ? manifestState.manifest : null;
   const drift = await compareTarget(targetDir, managedSourceEntries, installedManifest);
@@ -442,8 +450,12 @@ async function main() {
     const payload = {
       command,
       target: targetDir,
+      exact: drift.exact,
       missing: drift.missing,
       modified: drift.modified,
+      bootstrapOnly,
+      managedFileCount: managedSourceEntries.length,
+      templatePayloadFileCount: allSourceEntries.length,
       unexpectedManaged: drift.unexpectedManaged,
       driftDetected: drift.missing.length > 0 || drift.modified.length > 0 || drift.unexpectedManaged.length > 0
     };
@@ -451,7 +463,7 @@ async function main() {
       process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
     } else {
       process.stdout.write(`[harness-sync] target=${payload.target}\n`);
-      process.stdout.write(`[harness-sync] missing=${payload.missing.length} modified=${payload.modified.length} unexpectedManaged=${payload.unexpectedManaged.length}\n`);
+      process.stdout.write(`[harness-sync] exact=${payload.exact.length} missing=${payload.missing.length} modified=${payload.modified.length} bootstrapOnly=${payload.bootstrapOnly.length} unexpectedManaged=${payload.unexpectedManaged.length}\n`);
     }
     process.exit(payload.driftDetected ? 2 : 0);
   }

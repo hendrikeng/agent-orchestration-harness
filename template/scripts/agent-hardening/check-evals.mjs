@@ -2,6 +2,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { resolveSafeRepoPath } from '../automation/lib/repo-paths.mjs';
+import { computeEvalInputSha256 } from './eval-input-hash.mjs';
 
 const rootDir = process.cwd();
 const configPath = path.join(rootDir, 'docs', 'agent-hardening', 'evals.config.json');
@@ -243,16 +244,26 @@ async function main() {
     fail(`Report generatedAtUtc is invalid: ${String(generatedAtRaw)}`);
   }
 
-  const maxAgeDays = Number(config.maxAgeDays ?? 0);
-  if (!Number.isInteger(maxAgeDays) || maxAgeDays <= 0) {
-    fail("Config field 'maxAgeDays' must be a positive integer.");
-  }
   const ageDays = daysBetween(generatedAt, new Date());
   if (ageDays < 0) {
     fail(`Eval report generatedAtUtc is in the future: ${generatedAtRaw}`);
   }
-  if (ageDays > maxAgeDays) {
-    fail(`Eval report is stale (${ageDays} days old, max ${maxAgeDays}).`);
+  const freshnessMode = String(config.freshnessMode ?? 'time-bound');
+  if (freshnessMode === 'content-addressed') {
+    const expectedInputSha256 = await computeEvalInputSha256(rootDir, config);
+    if (report.inputSha256 !== expectedInputSha256) {
+      fail('Eval report inputSha256 does not match current policy and fixture inputs; run pnpm eval:refresh.');
+    }
+  } else if (freshnessMode === 'time-bound') {
+    const maxAgeDays = Number(config.maxAgeDays ?? 0);
+    if (!Number.isInteger(maxAgeDays) || maxAgeDays <= 0) {
+      fail("Config field 'maxAgeDays' must be a positive integer.");
+    }
+    if (ageDays > maxAgeDays) {
+      fail(`Eval report is stale (${ageDays} days old, max ${maxAgeDays}).`);
+    }
+  } else {
+    fail(`Unsupported eval freshnessMode: ${freshnessMode}`);
   }
 
   const summary = report.summary;

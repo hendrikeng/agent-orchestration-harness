@@ -739,11 +739,11 @@ async function main() {
   await writeProjectGates(repoDir);
   await writeProductDocs(repoDir);
   await writePlanEvidence(repoDir);
+  runCommand(repoDir, 'npm run eval:refresh', { CI: '1' });
   runCommand(repoDir, 'npm run bootstrap:cleanup', { CI: '1' });
   commitReleaseSlice(repoDir);
 
   const commands = [
-    'node ./scripts/check-template-placeholders.mjs',
     'npm run harness:verify',
     'npm run docs:verify',
     'npm run quality:score',

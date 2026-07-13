@@ -6,8 +6,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const scriptPath = path.join(repoRoot, 'template', 'scripts', 'docs', 'repair-plan-references.mjs');
+const harnessRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const scriptPath = path.join(harnessRoot, 'scripts', 'docs', 'repair-plan-references.mjs');
 
 function runRepair(rootDir, args = ['--dry-run']) {
   return spawnSync('node', [scriptPath, ...args], {

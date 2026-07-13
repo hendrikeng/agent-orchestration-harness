@@ -59,9 +59,10 @@ function branchClass(headRef) {
   return "other";
 }
 
-export function validatePrContract({ headRef, baseRef, body }) {
+export function validatePrContract({ headRef, baseRef, title, body }) {
   const head = String(headRef ?? "").trim();
   const base = String(baseRef ?? "").trim();
+  const normalizedTitle = String(title ?? "").trim();
   const normalizedBody = normalizeText(body);
   const kind = branchClass(head);
   const findings = [];
@@ -74,6 +75,12 @@ export function validatePrContract({ headRef, baseRef, body }) {
   if (kind === "release") {
     if (base !== "main") {
       findings.push(`release PRs must target main; got ${head} -> ${base}.`);
+    }
+
+    const releaseVersion = head.slice('release/'.length);
+    const expectedTitle = `Release ${releaseVersion}`;
+    if (normalizedTitle !== expectedTitle) {
+      findings.push(`release PR title must be '${expectedTitle}'; got '${normalizedTitle || '(empty)'}'.`);
     }
 
     const missing = missingMarkers(normalizedBody, RELEASE_CONTRACT_MARKERS);
@@ -216,6 +223,7 @@ export function readPrContractFromEnv(env = process.env) {
     headRef: env.PR_CONTRACT_HEAD_REF || env.GITHUB_HEAD_REF || pullRequest.head?.ref || "",
     baseRef: env.PR_CONTRACT_BASE_REF || env.GITHUB_BASE_REF || pullRequest.base?.ref || "",
     baseSha: env.PR_CONTRACT_BASE_SHA || pullRequest.base?.sha || "",
+    title: env.PR_CONTRACT_TITLE ?? pullRequest.title ?? "",
     body: env.PR_CONTRACT_BODY ?? pullRequest.body ?? "",
   };
 }

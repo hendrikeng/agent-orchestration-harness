@@ -138,6 +138,8 @@ Docs are part of done.
 
 - Runtime context generation: `npm run context:compile`.
 - Agent loop contract: `npm run agent:loop`.
+- Eval report integrity: `npm run eval:refresh` and `npm run eval:verify`.
+- Harness regression tests: `npm run harness:test`.
 - Project gate declaration: `npm run project:gates:verify`.
 - Iteration profile: `npm run verify:fast`.
 - Merge profile: `npm run verify:full`.

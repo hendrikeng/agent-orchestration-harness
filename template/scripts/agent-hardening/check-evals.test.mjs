@@ -6,8 +6,12 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const scriptPath = path.join(repoRoot, 'template', 'scripts', 'agent-hardening', 'check-evals.mjs');
+const harnessRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const scriptPath = path.join(harnessRoot, 'scripts', 'agent-hardening', 'check-evals.mjs');
+
+function templatePlaceholder(name) {
+  return `{${`{${name}}`}}`;
+}
 
 async function createFixtureRoot() {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), 'check-evals-'));
@@ -158,7 +162,7 @@ test('check-evals rejects embedded placeholders in required failure fixtures', a
     'utf8'
   );
   await writeRequiredFailureFixture(rootDir, {
-    prompt: 'Review {{PRODUCT}} before closeout.'
+    prompt: `Review ${templatePlaceholder('PRODUCT')} before closeout.`
   });
   await fs.writeFile(
     path.join(rootDir, 'docs', 'generated', 'evals-report.json'),

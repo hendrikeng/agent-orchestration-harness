@@ -6,8 +6,12 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const scriptPath = path.join(repoRoot, 'template', 'scripts', 'automation', 'check-project-gates.mjs');
+const harnessRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const scriptPath = path.join(harnessRoot, 'scripts', 'automation', 'check-project-gates.mjs');
+
+function templatePlaceholder(name) {
+  return `{${`{${name}}`}}`;
+}
 
 async function createFixtureRoot(gates) {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), 'project-gates-'));
@@ -75,7 +79,7 @@ test('project gates accepts real baseline commands', async () => {
 
 test('project gates rejects unresolved placeholders in adopted repos', async () => {
   const rootDir = await createFixtureRoot([
-    { ...baselineGates[0], command: '{{PROJECT_LINT_COMMAND}}' },
+    { ...baselineGates[0], command: templatePlaceholder('PROJECT_LINT_COMMAND') },
     ...baselineGates.slice(1)
   ]);
   const result = spawnSync('node', [scriptPath], { cwd: rootDir, encoding: 'utf8' });

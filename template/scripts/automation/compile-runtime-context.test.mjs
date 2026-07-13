@@ -6,10 +6,6 @@ import { spawnSync } from 'node:child_process';
 
 import { createTemplateRepo, runNode } from './test-helpers.mjs';
 
-function templatePlaceholder(name) {
-  return `{${`{${name}}`}}`;
-}
-
 test('context:compile is deterministic when sources are unchanged', async () => {
   const rootDir = await createTemplateRepo();
   const result = runNode(path.join(rootDir, 'scripts', 'automation', 'compile-runtime-context.mjs'), [], rootDir);
@@ -36,7 +32,7 @@ test('context:compile preserves adopted repository doc owner', async () => {
   const agentsDoc = await fs.readFile(agentsPath, 'utf8');
   await fs.writeFile(
     agentsPath,
-    String(agentsDoc).replace(`Owner: ${templatePlaceholder('DOC_OWNER')}`, 'Owner: Platform Engineering'),
+    String(agentsDoc).replace(/^Owner: .+$/m, 'Owner: Platform Engineering'),
     'utf8'
   );
 
@@ -59,12 +55,12 @@ test('context:compile prefers canonical owner over stale generated owner', async
   const generatedDoc = await fs.readFile(generatedPath, 'utf8');
   await fs.writeFile(
     agentsPath,
-    String(agentsDoc).replace(`Owner: ${templatePlaceholder('DOC_OWNER')}`, 'Owner: Platform Engineering'),
+    String(agentsDoc).replace(/^Owner: .+$/m, 'Owner: Platform Engineering'),
     'utf8'
   );
   await fs.writeFile(
     generatedPath,
-    String(generatedDoc).replace(`Owner: ${templatePlaceholder('DOC_OWNER')}`, 'Owner: Stale Generated Owner'),
+    String(generatedDoc).replace(/^Owner: .+$/m, 'Owner: Stale Generated Owner'),
     'utf8'
   );
 

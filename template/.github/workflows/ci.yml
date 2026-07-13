@@ -50,6 +50,7 @@ jobs:
           cache-dependency-path: ${{ env.PACKAGE_MANAGER_LOCKFILE }}
 
       - run: ${{ env.CI_INSTALL_COMMAND }}
+      - run: npm run eval:refresh && git diff --exit-code -- docs/generated/evals-report.json
       - run: npm run pr:verify
         if: github.event_name == 'pull_request'
       - run: npm run plans:verify:closeout
@@ -104,6 +105,10 @@ jobs:
       - name: Verify release candidate PR
         if: github.event_name == 'pull_request'
         run: npm run release:verify
+        env:
+          RELEASE_BASE_REF: origin/main
       - name: Verify release candidate merge queue
         if: github.event_name == 'merge_group'
         run: npm run release:verify -- --allow-any-branch
+        env:
+          RELEASE_BASE_REF: origin/main

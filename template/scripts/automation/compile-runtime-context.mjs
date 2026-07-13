@@ -84,6 +84,10 @@ function extractOwner(raw) {
   return owner && !isTemplatePlaceholder(owner) ? owner : '';
 }
 
+function extractLastUpdated(raw) {
+  return String(raw ?? '').match(/^Last Updated:\s+(\d{4}-\d{2}-\d{2})$/m)?.[1]?.trim() ?? '';
+}
+
 async function readOwnerFromFile(filePath) {
   try {
     return extractOwner(await fs.readFile(filePath, 'utf8'));
@@ -106,6 +110,19 @@ async function resolveDocOwner(rootDir, outputPath) {
     }
   }
   return templatePlaceholder('DOC_OWNER');
+}
+
+async function resolveLastUpdated(rootDir, outputPath) {
+  const candidates = [path.join(rootDir, 'AGENTS.md'), path.join(rootDir, 'README.md'), path.join(rootDir, 'docs', 'README.md'), outputPath];
+  for (const candidate of candidates) {
+    try {
+      const value = extractLastUpdated(await fs.readFile(candidate, 'utf8'));
+      if (value) return value;
+    } catch {
+      // Try the next canonical source.
+    }
+  }
+  return templatePlaceholder('LAST_UPDATED_ISO_DATE');
 }
 
 function buildContent(policy, today, docOwner) {
@@ -177,9 +194,9 @@ async function main() {
   const output = resolveSafeRepoPath(rootDir, String(options.output ?? DEFAULT_OUTPUT_PATH), 'Context output path');
   const policy = resolveSafeRepoPath(rootDir, String(options.policy ?? DEFAULT_POLICY_PATH), 'Policy input path');
   const policyJson = await readJson(policy.abs);
-  const today = new Date().toISOString().slice(0, 10);
+  const lastUpdated = await resolveLastUpdated(rootDir, output.abs);
   const docOwner = await resolveDocOwner(rootDir, output.abs);
-  const content = buildContent(policyJson, today, docOwner);
+  const content = buildContent(policyJson, lastUpdated, docOwner);
   await fs.mkdir(path.dirname(output.abs), { recursive: true });
   await fs.writeFile(output.abs, content, 'utf8');
   console.log(`[context:compile] wrote ${output.rel}`);

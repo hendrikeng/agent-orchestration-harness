@@ -76,7 +76,9 @@ Review should look for:
 - `npm run docs:verify`
 - `npm run architecture:verify`
 - `npm run agent:verify`
+- `npm run eval:refresh`
 - `npm run eval:verify`
+- `npm run harness:test`
 - `npm run plans:verify`
 - `npm run harness:verify`
 - `npm run project:gates:verify`

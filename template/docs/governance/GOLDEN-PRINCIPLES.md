@@ -27,7 +27,7 @@ Source of Truth: This document.
 - Docs governance: `npm run docs:verify`
 - Project gates: `npm run project:gates:verify`
 - Architecture gates: `npm run architecture:verify`
-- Agent hardening: `npm run agent:verify` and `npm run eval:verify`
+- Agent hardening: `npm run agent:verify`, `npm run eval:refresh`, and `npm run eval:verify`
 
 ## Application Rules
 

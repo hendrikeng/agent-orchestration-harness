@@ -8,6 +8,17 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const scriptPath = path.join(repoRoot, 'scripts', 'harness-sync.mjs');
+const bootstrapOnlyPaths = [
+  'PLACEHOLDERS.md',
+  'package.scripts.fragment.json',
+  'scripts/bootstrap-verify.sh',
+  'scripts/bootstrap-verify.test.mjs',
+  'scripts/check-template-placeholders.mjs',
+  'scripts/check-template-placeholders.sh',
+  'scripts/check-template-placeholders.test.mjs',
+  'scripts/cleanup-bootstrap-artifacts.mjs',
+  'scripts/cleanup-bootstrap-artifacts.test.mjs'
+];
 
 function run(args, cwd = repoRoot) {
   return spawnSync('node', [scriptPath, ...args], {
@@ -36,30 +47,29 @@ test('harness-sync install writes target files and downstream manifest', async (
   assert.equal(manifest.sourceManifest, 'distribution/harness-ownership-manifest.json');
   assert.equal(typeof manifest.sourceManifestSha256, 'string');
   assert.equal(manifest.sourceManifestSha256.length, 64);
-  assert.equal(
-    manifest.managedFiles.some((entry) => entry.targetPath === 'PLACEHOLDERS.md'),
-    false
-  );
-  assert.equal(
-    manifest.managedFiles.some((entry) => entry.targetPath === 'package.scripts.fragment.json'),
-    false
-  );
-  await fs.access(path.join(targetDir, 'PLACEHOLDERS.md'));
-  await fs.access(path.join(targetDir, 'package.scripts.fragment.json'));
+  for (const relative of bootstrapOnlyPaths) {
+    assert.equal(manifest.managedFiles.some((entry) => entry.targetPath === relative), false);
+    await fs.access(path.join(targetDir, relative));
+  }
 });
 
 test('harness-sync treats bootstrap helpers as removable after adoption', async () => {
   const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-bootstrap-only-'));
   assert.equal(run(['install', '--target', targetDir]).status, 0);
 
-  await fs.rm(path.join(targetDir, 'PLACEHOLDERS.md'));
-  await fs.rm(path.join(targetDir, 'package.scripts.fragment.json'));
+  for (const relative of bootstrapOnlyPaths) {
+    await fs.rm(path.join(targetDir, relative));
+  }
 
   const result = run(['drift', '--target', targetDir, '--json', 'true']);
   assert.equal(result.status, 0);
   const payload = JSON.parse(String(result.stdout));
-  assert.equal(payload.missing.includes('PLACEHOLDERS.md'), false);
-  assert.equal(payload.missing.includes('package.scripts.fragment.json'), false);
+  assert.equal(payload.exact.length, payload.managedFileCount);
+  assert.equal(payload.templatePayloadFileCount, payload.managedFileCount + payload.bootstrapOnly.length);
+  assert.deepEqual(payload.bootstrapOnly, [...bootstrapOnlyPaths].sort((left, right) => left.localeCompare(right)));
+  for (const relative of bootstrapOnlyPaths) {
+    assert.equal(payload.missing.includes(relative), false);
+  }
 });
 
 test('harness-sync drift reports modified managed files', async () => {

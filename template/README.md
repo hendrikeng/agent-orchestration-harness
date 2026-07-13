@@ -66,14 +66,16 @@ Use `docs/MANIFEST.md` for the complete first-class documentation inventory.
 
 ## Enforcement and Quality Gates
 
-- Bootstrap verification after initial placeholder replacement: `./scripts/bootstrap-verify.sh`
-- Bootstrap helper cleanup: `npm run bootstrap:cleanup`
-- Placeholder check: `./scripts/check-template-placeholders.sh`
+- Bootstrap verification after initial placeholder replacement: `./scripts/bootstrap-verify.sh` (removed by bootstrap cleanup)
+- Bootstrap helper cleanup: `npm run bootstrap:cleanup` (removes itself and other bootstrap-only utilities)
+- Placeholder check: `./scripts/check-template-placeholders.sh` (bootstrap-only)
 - Runtime context build: `npm run context:compile`
 - Docs governance: `npm run docs:verify`
 - Architecture rules: `npm run architecture:verify`
 - Agent policy checks: `npm run agent:verify`
+- Eval report refresh: `npm run eval:refresh`
 - Eval report checks: `npm run eval:verify`
+- Harness regression tests: `npm run harness:test`
 - Project gate declaration: `npm run project:gates:verify`
 - Plan metadata verification: `npm run plans:verify`
 - Fast iteration profile: `npm run verify:fast`

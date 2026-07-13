@@ -6,11 +6,15 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const scriptPath = path.join(repoRoot, 'template', 'scripts', 'automation', 'check-quality-score.mjs');
+const harnessRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const scriptPath = path.join(harnessRoot, 'scripts', 'automation', 'check-quality-score.mjs');
 
 function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function templatePlaceholder(name) {
+  return `{${`{${name}}`}}`;
 }
 
 function qualityDoc({ owner = 'Platform', updated = todayIsoDate() } = {}) {
@@ -212,7 +216,7 @@ test('quality score ignores explanatory bullets outside score sections', async (
 
 test('quality score fails unclear ownership in adopted repos', async () => {
   const rootDir = await createFixtureRoot({
-    quality: qualityDoc({ owner: '{{DOC_OWNER}}' }),
+    quality: qualityDoc({ owner: templatePlaceholder('DOC_OWNER') }),
     agentOwner: 'Platform'
   });
   const result = spawnSync('node', [scriptPath], { cwd: rootDir, encoding: 'utf8' });

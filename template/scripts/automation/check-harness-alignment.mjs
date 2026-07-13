@@ -6,17 +6,18 @@ const rootDir = process.cwd();
 const findings = [];
 
 const requiredScripts = new Map([
-  ['bootstrap:cleanup', 'node ./scripts/cleanup-bootstrap-artifacts.mjs'],
   ['context:compile', 'node ./scripts/automation/compile-runtime-context.mjs'],
   ['docs:verify', 'node ./scripts/docs/check-governance.mjs'],
   ['conformance:verify', 'node ./scripts/check-article-conformance.mjs'],
   ['architecture:verify', 'node ./scripts/architecture/check-dependencies.mjs'],
   ['agent:verify', 'node ./scripts/agent-hardening/check-agent-hardening.mjs'],
+  ['eval:refresh', 'node ./scripts/agent-hardening/refresh-evals-report.mjs'],
   ['eval:verify', 'node ./scripts/agent-hardening/check-evals.mjs'],
   ['quality:score', 'node ./scripts/automation/check-quality-score.mjs'],
   ['project:gates:verify', 'node ./scripts/automation/check-project-gates.mjs'],
   ['project:gates:fast', 'node ./scripts/automation/check-project-gates.mjs --profile fast --run'],
   ['project:gates:full', 'node ./scripts/automation/check-project-gates.mjs --profile full --run'],
+  ['harness:test', 'node --test scripts/agent-hardening/*.test.mjs scripts/architecture/*.test.mjs scripts/automation/*.test.mjs scripts/automation/lib/*.test.mjs scripts/automation/lib/contracts/*.test.mjs scripts/docs/*.test.mjs scripts/docs/lib/*.test.mjs'],
   ['harness:verify', 'node ./scripts/automation/check-harness-alignment.mjs'],
   ['plans:verify', 'node ./scripts/automation/check-plan-metadata.mjs'],
   ['pr:verify', 'node ./scripts/automation/check-pr-contract.mjs'],
@@ -28,6 +29,7 @@ const requiredScripts = new Map([
 
 const optionalBlueprintScripts = new Map([
   ['bootstrap:verify', 'bash ./scripts/bootstrap-verify.sh'],
+  ['bootstrap:cleanup', 'node ./scripts/cleanup-bootstrap-artifacts.mjs'],
   ['path-policy:verify', 'node ./scripts/automation/check-path-policy.mjs'],
   ['lint:changed', 'node ./scripts/automation/lint-changed.mjs'],
   ['release:notes', 'node ./scripts/automation/release-notes.mjs'],

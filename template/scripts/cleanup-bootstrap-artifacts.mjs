@@ -4,7 +4,18 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const rootDir = process.cwd();
-const bootstrapArtifacts = ['PLACEHOLDERS.md', 'package.scripts.fragment.json'];
+const bootstrapArtifacts = [
+  'PLACEHOLDERS.md',
+  'package.scripts.fragment.json',
+  'scripts/bootstrap-verify.sh',
+  'scripts/bootstrap-verify.test.mjs',
+  'scripts/check-template-placeholders.mjs',
+  'scripts/check-template-placeholders.sh',
+  'scripts/check-template-placeholders.test.mjs',
+  'scripts/cleanup-bootstrap-artifacts.mjs',
+  'scripts/cleanup-bootstrap-artifacts.test.mjs'
+];
+const bootstrapScriptNames = ['bootstrap:verify', 'bootstrap:cleanup'];
 const downstreamManifestPath = 'docs/ops/automation/harness-manifest.json';
 
 function artifactPath(relativePath) {
@@ -85,10 +96,31 @@ async function pruneDownstreamManifest() {
   return true;
 }
 
+async function prunePackageScripts() {
+  const packageJson = await readJson('package.json');
+  const scripts = { ...(packageJson.scripts ?? {}) };
+  let changed = false;
+  for (const scriptName of bootstrapScriptNames) {
+    if (Object.hasOwn(scripts, scriptName)) {
+      delete scripts[scriptName];
+      changed = true;
+    }
+  }
+  if (changed) {
+    await fs.writeFile(
+      artifactPath('package.json'),
+      `${JSON.stringify({ ...packageJson, scripts }, null, 2)}\n`,
+      'utf8'
+    );
+  }
+  return changed;
+}
+
 async function main() {
   runPlaceholderCheck();
   await assertPackageScriptsMerged();
   const manifestPruned = await pruneDownstreamManifest();
+  const packageScriptsPruned = await prunePackageScripts();
 
   const removed = [];
   for (const relativePath of bootstrapArtifacts) {
@@ -99,7 +131,7 @@ async function main() {
     removed.push(relativePath);
   }
 
-  if (removed.length === 0 && !manifestPruned) {
+  if (removed.length === 0 && !manifestPruned && !packageScriptsPruned) {
     console.log('[bootstrap-cleanup] ok (no bootstrap artifacts present).');
     return;
   }
@@ -110,6 +142,9 @@ async function main() {
   }
   if (manifestPruned) {
     actions.push(`pruned ${downstreamManifestPath}`);
+  }
+  if (packageScriptsPruned) {
+    actions.push(`pruned package.json scripts: ${bootstrapScriptNames.join(', ')}`);
   }
   console.log(`[bootstrap-cleanup] ${actions.join('; ')}.`);
 }

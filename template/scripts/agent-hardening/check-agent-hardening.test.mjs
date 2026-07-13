@@ -6,8 +6,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const scriptPath = path.join(repoRoot, 'template', 'scripts', 'agent-hardening', 'check-agent-hardening.mjs');
+const harnessRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const scriptPath = path.join(harnessRoot, 'scripts', 'agent-hardening', 'check-agent-hardening.mjs');
 
 const markdownFiles = {
   'VISION.md': [

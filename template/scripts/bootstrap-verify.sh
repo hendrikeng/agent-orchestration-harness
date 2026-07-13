@@ -7,6 +7,7 @@ cd "$REPO_ROOT"
 
 ./scripts/check-template-placeholders.sh
 npm run context:compile
+npm run eval:refresh
 npm run verify:fast
 npm run verify:full
 npm run bootstrap:cleanup

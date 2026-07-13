@@ -84,6 +84,8 @@ function buildCommandSet(changedFiles) {
       ? 'node ./scripts/docs/repair-plan-references.mjs --dry-run'
       : 'node ./scripts/docs/repair-plan-references.mjs',
     'node ./scripts/docs/check-governance.mjs',
+    'node ./scripts/agent-hardening/check-evals.mjs',
+    'npm run harness:test',
     resolvedPlanMetadataCommand(),
     'node ./scripts/automation/check-plan-closeout.mjs',
     'node ./scripts/automation/check-harness-alignment.mjs',

@@ -10,7 +10,14 @@
   ],
   "bootstrapOnlyGlobs": [
     "PLACEHOLDERS.md",
-    "package.scripts.fragment.json"
+    "package.scripts.fragment.json",
+    "scripts/bootstrap-verify.sh",
+    "scripts/bootstrap-verify.test.mjs",
+    "scripts/check-template-placeholders.mjs",
+    "scripts/check-template-placeholders.sh",
+    "scripts/check-template-placeholders.test.mjs",
+    "scripts/cleanup-bootstrap-artifacts.mjs",
+    "scripts/cleanup-bootstrap-artifacts.test.mjs"
   ],
   "excludeGlobs": [
     ".gitignore",
