@@ -14,13 +14,9 @@ const markdownFiles = {
     'Purpose',
     'Users And Outcomes',
     'Desired State',
-    'Loop Invariants',
-    'Drift Signals',
-    'Verification Gates',
-    'Memory Locations',
-    'Operating Strategy',
-    'Default Agent Loop',
-    'Escalation Rules'
+    'Durable Product Principles',
+    'Strategic Boundaries',
+    'Canonical Product References'
   ],
   'AGENTS.md': ['Operating Model', 'Agent Handout', 'Core Map'],
   'docs/agent-hardening/AGENT_LOOP.md': [
