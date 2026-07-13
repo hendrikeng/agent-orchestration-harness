@@ -3,81 +3,36 @@
 Status: canonical
 Owner: {{DOC_OWNER}}
 Last Updated: {{LAST_UPDATED_ISO_DATE}}
-Source of Truth: This document delegates to `docs/exec-plans/README.md`.
+Source of Truth: This document routes planning work to the detailed contracts under `docs/future/` and `docs/exec-plans/`.
 
-Use execution plans for all implemented changes so intent, decisions, and rollout state stay discoverable.
+## Purpose
 
-The canonical workflow is:
+Planning keeps intent, executable scope, validation, and evidence discoverable without turning one document into a second implementation manual.
 
-1. Read `VISION.md`, `AGENTS.md`, nearest live code, and relevant canonical docs.
-2. Plan in `docs/future/`.
-3. Make future slices decision-complete.
-4. Promote ready futures through the flat queue in sequence.
+Use one plan file per executable slice. Keep `## Already-True Baseline`, `## Must-Land Checklist`, and `## Deferred Follow-Ons` separate so completed scope is unambiguous.
 
-## Work Classes
+## Choose A Path
 
-Use `docs/future/` before execution when any of these are true:
-
-- The change spans multiple domains, apps, or deployment steps.
-- The change affects architecture boundaries or critical invariants.
-- The implementation is expected to span multiple pull requests.
-- The rollout risk is medium/high and benefits from explicit promotion into the active queue.
-
-Use direct `docs/exec-plans/active/` entry for quick/manual fixes when all of these are true:
-
-- The change is isolated and low risk.
-- No architecture boundary or critical invariant changes are required.
-- The work can complete as one focused slice while preserving full plan metadata/evidence.
-
-Examples:
-
-- `future required`: major feature slice, migration, cross-cutting refactor.
-- `direct active allowed`: isolated UI color tweak, contained bug fix, minor copy/label update.
+- Use `docs/future/` for non-trivial work, cross-domain changes, architecture or invariant changes, staged rollout, multi-session work, and medium/high-risk changes.
+- Use direct `docs/exec-plans/active/` entry only for isolated, low-risk work that can finish as one focused slice without changing architecture or critical invariants.
+- If direct work expands, stop and create or promote a future slice.
+- Planning-only requests stop in `docs/future/`; implementation requires explicit approval.
 
 ## Lifecycle
 
-1. Strategic/non-trivial path: draft in `docs/future/` and set readiness (`draft` -> `ready-for-promotion`), then promote into `docs/exec-plans/active/`.
-   Use the Future Intake Gate and Promotion Gate in `docs/future/README.md` before setting `Status: ready-for-promotion`.
-2. Quick/manual path: create the plan directly in `docs/exec-plans/active/` with complete metadata.
-3. Record decisions and acceptance criteria before implementation.
-4. Split plan text into three explicit scopes before implementation:
-   `## Already-True Baseline`, `## Must-Land Checklist`, and `## Deferred Follow-Ons`.
-5. Implement the smallest safe slice and update tests/docs in the same change.
-6. Validate plan metadata with `npm run plans:verify`.
-7. During implementation, run `npm run verify:fast`.
-8. Before merge/completion, run `npm run verify:full` plus relevant domain tests.
-9. Complete by moving to `docs/exec-plans/completed/` with concise summary/closure and canonical `Done-Evidence` index references.
+1. Read `VISION.md`, `AGENTS.md`, nearest live code, and relevant canonical docs.
+2. Create one future slice and make its acceptance criteria, dependencies, targets, risk, validation, and must-land checklist explicit.
+3. Set it to `ready-for-promotion` only when execution ambiguity and blockers are resolved.
+4. Promote it into `docs/exec-plans/active/` and implement the smallest safe slice.
+5. Run `npm run verify:fast` during implementation and `npm run verify:full` plus relevant domain checks before completion.
+6. Move the completed plan to `docs/exec-plans/completed/` and preserve concise evidence under `docs/exec-plans/evidence-index/`.
 
-Execution is valid only if it preserves status transitions, metadata integrity, validation, and evidence/index curation behavior.
+## Canonical Detail Owners
 
-## Plan-Only Requests
+- `docs/future/README.md`: future metadata, intake, promotion, multi-phase coverage, and authoring rules.
+- `docs/exec-plans/README.md`: active/completed metadata, statuses, delivery semantics, evidence, and closeout.
+- `docs/exec-plans/active/README.md`: active execution and session retention.
+- `docs/exec-plans/completed/README.md`: completion requirements.
+- `docs/ops/automation/LITE_QUICKSTART.md`: shortest day-to-day workflow.
 
-When the user asks for planning only (no implementation yet):
-
-1. Update or create the executable future slice in `docs/future/`.
-2. Do not edit source/test/runtime files.
-3. Stop once the future slice is decision-complete; do not continue into implementation just because the next coding step is obvious.
-4. Make `## Must-Land Checklist` the exact executable contract for the future promotion.
-5. Keep `Dependencies` explicit when the work depends on earlier slices.
-6. Use separate future files instead of parent/child planning trees when one ask expands into multiple executable slices.
-7. Set `Status: ready-for-promotion` when the plan is implementation-ready.
-
-This also applies when the agent/session is explicitly set to plan mode: default to `docs/future` planning outputs until implementation is explicitly requested. Planning completion is not execution approval.
-
-## Multi-Phase Architecture Programs
-
-For high-risk, multi-phase architecture work:
-
-- Create one canonical target-state architecture doc.
-- Create one future file per executable phase.
-- Make all phases coverage-complete before implementation begins so major concerns are not forgotten.
-- Make only the next one or two phases fully decision-complete before promotion.
-- Keep distant phases lighter where exact implementation depends on earlier outcomes.
-- Do not begin a high-risk phase until its future file names ownership boundaries, contracts, validation, and rollback or fallback expectations.
-
-## Structure
-
-- `docs/exec-plans/README.md`
-- `docs/exec-plans/active/README.md`
-- `docs/exec-plans/completed/README.md`
-- `docs/exec-plans/TECH-DEBT-TRACKER.md`
+General planning rules belong here only when they determine which detailed contract applies. Update the detailed owner instead of repeating its full checklist in this file.

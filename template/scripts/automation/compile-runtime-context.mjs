@@ -42,14 +42,19 @@ function summarizeRules(rules) {
     .join('\n');
 }
 
+function pick(items, indexes) {
+  const source = Array.isArray(items) ? items : [];
+  return indexes.map((index) => source[index]).filter(Boolean);
+}
+
 function summarizeExecutionQuality(executionQuality) {
   if (!executionQuality) {
     return '';
   }
   return [
-    ['goal: ', executionQuality.goalDrivenExecution],
-    ['scope: ', executionQuality.simplicityAndScope],
-    ['assumption: ', executionQuality.assumptionDiscipline]
+    ['goal: ', pick(executionQuality.goalDrivenExecution, [0, 1])],
+    ['scope: ', pick(executionQuality.simplicityAndScope, [0])],
+    ['assumption: ', pick(executionQuality.assumptionDiscipline, [1])]
   ]
     .map(([prefix, items]) => summarizeList(items, prefix))
     .filter(Boolean)
@@ -61,10 +66,10 @@ function summarizeRunControl(runControl) {
     return '';
   }
   return [
-    ['goal: ', runControl.goalDrivenRunControl],
-    ['delegate: ', runControl.delegationPolicy],
-    ['runtime: ', runControl.runtimeExecutionPolicy],
-    ['audit: ', runControl.completionAudit]
+    ['goal: ', pick(runControl.goalDrivenRunControl, [0, 2, 3])],
+    ['delegate: ', pick(runControl.delegationPolicy, [0, 3])],
+    ['runtime: ', pick(runControl.runtimeExecutionPolicy, [0, 1, 2, 5])],
+    ['audit: ', pick(runControl.completionAudit, [0, 1, 3])]
   ]
     .map(([prefix, items]) => summarizeList(items, prefix))
     .filter(Boolean)
@@ -170,10 +175,8 @@ ${summarizeRunControl(policy?.runControl)}
 
 ## Memory Posture
 
-${summarizeList(policy?.memoryPosture?.whatToDo, 'do: ')}
-${summarizeList(policy?.memoryPosture?.improveBeforeRearchitecture, 'improve first: ')}
-${summarizeList(policy?.memoryPosture?.doNotAddYet, 'not yet: ')}
-${summarizeList(policy?.memoryPosture?.escalateWhen, 'escalate when: ')}
+${summarizeList(pick(policy?.memoryPosture?.whatToDo, [0, 1, 2, 4]), 'do: ')}
+${summarizeList(pick(policy?.memoryPosture?.doNotAddYet, [0, 1]), 'not yet: ')}
 - safe rule: ${policy?.memoryPosture?.safeRule ?? 'Keep work state repo-local unless repeated failures prove otherwise.'}
 
 ## Execution Checklist

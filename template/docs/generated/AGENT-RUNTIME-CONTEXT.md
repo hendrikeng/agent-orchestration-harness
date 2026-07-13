@@ -62,34 +62,22 @@ Canonical entrypoints:
 
 - goal: Translate implementation requests into verifiable goals before editing.
 - goal: For multi-step work, pair each planned step with the check that proves it.
-- goal: Loop on the smallest relevant check until the goal is verified, then run the required gate before closeout.
 - scope: Prefer the smallest implementation that satisfies the must-land checklist.
-- scope: Every changed line should trace to the user request, active plan, or required validation.
-- scope: Use abstractions only when they clarify ownership, remove real duplication, or create a stable cross-layer contract.
-- assumption: State material assumptions when intent has multiple plausible interpretations.
 - assumption: Ask or stop rather than silently choosing a risky path.
-- assumption: Do not claim production readiness from proxy signals unless the checks cover the changed behavior.
 
 ## Run Control
 
 - goal: Treat user intent, acceptance criteria, constraints, validation path, blockers, and completion evidence as the goal contract.
-- goal: Use runtime-native goal, task, background-run, session, trace, and plan primitives when they improve reliability.
 - goal: Do not add a repo-local scheduler, custom agent chain, or orchestration daemon when runtime-native execution plus repo-local plans, checks, and evidence can carry the work.
 - goal: Keep repo-local plans and evidence authoritative for work spanning sessions, agents, branches, or pull requests.
-- goal: Stop and re-scope when one goal becomes multiple independent outcomes or requires new security approval.
 - delegate: Delegate bounded sidecar work only when it can run independently without blocking the immediate next local step.
-- delegate: Keep urgent critical-path work in the main run when the next action depends on the result.
-- delegate: Every delegated task must name output, allowed write scope, relevant files, validation expectation, and tool boundaries.
 - delegate: The main run remains responsible for integration, review, validation, and closeout.
 - runtime: Treat runtime-native goals, background tasks, automations, subagents, hooks, and traces as replaceable execution adapters, not as blueprint-owned orchestration.
 - runtime: Prefer deterministic checks, hooks, guardrails, typed tool schemas, and structured outputs over prompt-only reminders for repeatable constraints.
 - runtime: Before pause, context compaction, background handoff, or agent handoff, preserve a continuation packet with objective, active plan, acceptance criteria, changed files, validation status, evidence paths, blockers, and next action.
-- runtime: Autonomous or background execution is ready only when the goal contract, approval boundaries, project gates, traceability, and closeout evidence are explicit before the run starts.
-- runtime: Treat runtime memory, conversation state, encrypted reasoning items, background tasks, and compacted context as accelerators, not authority.
 - runtime: If runtime behavior conflicts with repo policy, repo policy wins until a canonical doc change lands.
 - audit: Restate the objective as concrete deliverables or success criteria before claiming completion.
 - audit: Map every explicit requirement, named file, command, test, gate, and deliverable to real evidence.
-- audit: Inspect actual files, command output, generated artifacts, evidence paths, and worktree state for each checklist item.
 - audit: Mark uncertainty as incomplete and either verify more, narrow the claim, or create a follow-up future slice.
 
 ## Memory Posture
@@ -97,20 +85,9 @@ Canonical entrypoints:
 - do: Treat the repo as the main operating system for agent work.
 - do: Keep plans, docs, validation output, PR context, and evidence in-repo.
 - do: Use the active or future plan as the current execution contract.
-- do: Keep future and active must-land items as explicit checkboxes with stable backticked IDs.
 - do: Prefer nearest live code examples before inventing new patterns.
-- do: Treat runtime-native goals, sessions, background runs, compacted context, and encrypted reasoning items as transient execution aids unless their decisions are written back into repo-local artifacts.
-- improve first: Better active-plan quality and explicit must-land scopes.
-- improve first: Better PR summaries and evidence indexes.
-- improve first: Better generated context quality and canonical doc navigation.
-- improve first: Better validation coverage before widening workflow machinery.
-- improve first: Better canonical rule ownership before adding duplicate guidance.
 - not yet: Do not treat provider chats as durable working memory.
 - not yet: Do not use provider session state as the only record of goal progress, handoff decisions, validation evidence, or completion claims.
-- not yet: Do not create agent-specific policy forks to compensate for thin canonical docs.
-- escalate when: Canonical docs repeatedly fail to let a fresh agent resume safely.
-- escalate when: Important operational context is living only in chat or terminal scrollback.
-- escalate when: Manual promotion or review discipline keeps breaking because the contract is under-specified.
 - safe rule: Keep work state repo-local through clear docs, current plans, validation, and evidence.
 
 ## Execution Checklist
