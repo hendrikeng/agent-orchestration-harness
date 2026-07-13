@@ -41,9 +41,9 @@ function fileAtRef(ref, filePath) {
   }
 }
 
-function metadataValue(content, label) {
+export function metadataValue(content, label) {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = content.match(new RegExp(`^${escaped}:\\s*(.+)$`, "m"));
+  const match = content.match(new RegExp(`^(?:-\\s+)?${escaped}:\\s*(.+)$`, "m"));
   return match ? match[1].trim().replace(/^`|`$/g, "") : "";
 }
 

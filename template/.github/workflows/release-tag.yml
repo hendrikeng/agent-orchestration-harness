@@ -57,12 +57,22 @@ jobs:
 
       - name: Create annotated release tag
         shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
           set -euo pipefail
 
-          tag="${{ steps.release.outputs.tag }}"
-          version="${{ steps.release.outputs.version }}"
-          merge_sha="${{ github.event.pull_request.merge_commit_sha }}"
+          tag="$RELEASE_TAG"
+          version="$RELEASE_VERSION"
+          merge_sha="$MERGE_SHA"
+
+          parent_count="$(git rev-list --parents -n 1 "$merge_sha" | awk '{print NF - 1}')"
+          if [[ "$parent_count" -ne 2 ]]; then
+            echo "Release PR must be merged with a merge commit; $merge_sha has $parent_count parent(s)." >&2
+            exit 1
+          fi
 
           if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
             echo "Tag already exists: $tag" >&2
