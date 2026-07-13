@@ -26,6 +26,19 @@ export const HIGH_RISK_STANDARD_CHANGE_PREFIXES = [
   "scripts/docs/",
 ];
 
+export const HIGH_RISK_STANDARD_CHANGE_SEGMENTS = [
+  "/auth/",
+  "/security/",
+  "/identity/",
+  "/tenancy/",
+  "/payments/",
+  "/billing/",
+  "/db/",
+  "/database/",
+  "/persistence/",
+  "/migrations/",
+];
+
 export const HIGH_RISK_STANDARD_CHANGE_FILES = [
   "AGENTS.md",
   "ARCHITECTURE.md",
@@ -69,8 +82,10 @@ export function isStandardChangeBranch(branchName) {
 }
 
 export function isHighRiskStandardChangePath(filePath) {
+  const rootedPath = `/${String(filePath).replaceAll("\\", "/")}`;
   return HIGH_RISK_STANDARD_CHANGE_FILES.includes(filePath)
-    || HIGH_RISK_STANDARD_CHANGE_PREFIXES.some((prefix) => filePath.startsWith(prefix));
+    || HIGH_RISK_STANDARD_CHANGE_PREFIXES.some((prefix) => filePath.startsWith(prefix))
+    || HIGH_RISK_STANDARD_CHANGE_SEGMENTS.some((segment) => rootedPath.includes(segment));
 }
 
 export function summarizePlanCloseoutDiff(changedFiles, { branchName = "" } = {}) {
