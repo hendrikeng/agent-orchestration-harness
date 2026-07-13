@@ -80,9 +80,7 @@ function buildCommandSet(changedFiles) {
     'node ./scripts/automation/compile-runtime-context.mjs',
     'node ./scripts/automation/lint-changed.mjs',
     'node ./scripts/automation/check-path-policy.mjs',
-    asBoolean(process.env.CI, false)
-      ? 'node ./scripts/docs/repair-plan-references.mjs --dry-run'
-      : 'node ./scripts/docs/repair-plan-references.mjs',
+    'node ./scripts/docs/repair-plan-references.mjs --check',
     'node ./scripts/docs/check-governance.mjs',
     'node ./scripts/agent-hardening/check-evals.mjs',
     'npm run harness:test',

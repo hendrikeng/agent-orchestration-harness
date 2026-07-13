@@ -56,6 +56,24 @@ test('repair-plan-references treats existing active plan paths as valid even wit
   assert.match(result.stdout, /unresolved stale refs: 0/);
 });
 
+test('repair-plan-references check fails without mutating stale references', async () => {
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repair-plan-check-'));
+  await fs.mkdir(path.join(rootDir, 'docs', 'exec-plans', 'completed'), { recursive: true });
+  await fs.writeFile(
+    path.join(rootDir, 'docs', 'exec-plans', 'completed', '2026-03-16-sample-plan.md'),
+    '# Sample Plan\n\n## Metadata\n\n- Plan-ID: sample-plan\n',
+    'utf8'
+  );
+  const sourcePath = path.join(rootDir, 'README.md');
+  const staleContent = '[Plan](docs/exec-plans/active/2026-03-16-sample-plan.md)\n';
+  await fs.writeFile(sourcePath, staleContent, 'utf8');
+
+  const result = runRepair(rootDir, ['--check']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /check failed/);
+  assert.equal(await fs.readFile(sourcePath, 'utf8'), staleContent);
+});
+
 test('repair-plan-references rewrites stale active plan links to completed plans with the same plan id', async () => {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repair-plan-completed-'));
   await fs.mkdir(path.join(rootDir, 'docs', 'exec-plans', 'completed'), { recursive: true });

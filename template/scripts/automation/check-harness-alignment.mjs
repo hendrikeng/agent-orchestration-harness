@@ -19,6 +19,7 @@ const requiredScripts = new Map([
   ['project:gates:full', 'node ./scripts/automation/check-project-gates.mjs --profile full --run'],
   ['harness:test', 'node --test scripts/agent-hardening/*.test.mjs scripts/architecture/*.test.mjs scripts/automation/*.test.mjs scripts/automation/lib/*.test.mjs scripts/automation/lib/contracts/*.test.mjs scripts/docs/*.test.mjs scripts/docs/lib/*.test.mjs'],
   ['harness:verify', 'node ./scripts/automation/check-harness-alignment.mjs'],
+  ['plans:repair', 'node ./scripts/docs/repair-plan-references.mjs'],
   ['plans:verify', 'node ./scripts/automation/check-plan-metadata.mjs'],
   ['pr:verify', 'node ./scripts/automation/check-pr-contract.mjs'],
   ['plans:verify:closeout', 'node ./scripts/automation/check-plan-closeout.mjs'],

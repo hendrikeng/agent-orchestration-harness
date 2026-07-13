@@ -19,11 +19,15 @@ function toPosix(value) {
 }
 
 function parseArgs(argv) {
-  const options = { dryRun: false };
+  const options = { dryRun: false, check: false };
   for (let index = 0; index < argv.length; index += 1) {
     const token = String(argv[index] ?? '').trim();
     if (token === '--dry-run') {
       options.dryRun = true;
+    }
+    if (token === '--check') {
+      options.dryRun = true;
+      options.check = true;
     }
   }
   return options;
@@ -368,6 +372,10 @@ async function main() {
   console.log('[plan-ref-repair] files updated:', filesUpdated);
   if (options.dryRun) {
     console.log('[plan-ref-repair] dry-run mode; no files were written.');
+  }
+  if (options.check && staleRefsFound > 0) {
+    console.error('[plan-ref-repair] check failed: stale plan references require explicit repair.');
+    process.exitCode = 1;
   }
 }
 

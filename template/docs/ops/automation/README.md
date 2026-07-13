@@ -80,6 +80,7 @@ Review should look for:
 - `npm run eval:verify`
 - `npm run harness:test`
 - `npm run plans:verify`
+- `npm run plans:repair` only when explicitly repairing stale plan references; verification profiles remain non-mutating.
 - `npm run harness:verify`
 - `npm run project:gates:verify`
 - `npm run verify:fast`

@@ -44,3 +44,9 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# transient legacy/external automation artifacts (not harness authority)
+docs/ops/automation/run-state.json
+docs/ops/automation/run-events.jsonl
+docs/ops/automation/runtime/
+docs/ops/automation/handoffs/
