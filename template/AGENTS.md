@@ -125,6 +125,14 @@ Detailed behavior snapshots, delivery history, and slice-level product changes b
 
 Docs are part of done.
 
+## Commit Traceability
+
+- Git commits, PRs, completed plans, and evidence are the development history; do not maintain a per-commit changelog.
+- Behavior or contract changes update the relevant canonical or current-state docs in the same commit. A genuinely unaffected small fix needs only a clear commit message.
+- Planned work retains its `Plan-ID` and completion evidence.
+- After committing, report the hash and subject, docs updated or why none were needed, and focused checks. A push creates no documentation.
+- Generate release notes only at the release boundary.
+
 ## Git and File Safety
 
 - Canonical policy location: `docs/design-docs/GIT-SAFETY.md`.
