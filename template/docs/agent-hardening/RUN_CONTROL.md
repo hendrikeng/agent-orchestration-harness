@@ -17,6 +17,19 @@ Source of Truth: This document.
 - Stop and re-scope when the requested goal becomes multiple independent outcomes, requires new security approval, or no longer fits one executable slice.
 - Completion requires a prompt-to-artifact audit: map every explicit requirement to real evidence, then close only the items proven by code, docs, checks, screenshots, traces, or accepted manual evidence.
 
+## Task Graph Planning
+
+- Use one direct run when the work is small, tightly coupled, or owned by one file area.
+- Use a task graph only when two or more ready tasks can make independent progress.
+- Define the objective, acceptance criteria, constraints, and final validation before you split the work.
+- Give each task a stable ID, one outcome, dependencies, write scope, relevant files, worker specialty, completion criteria, and validation.
+- Use dependency edges only for hard prerequisites. Keep the graph shallow and dispatch all ready independent tasks before you wait.
+- Assign one coordinator to own integration, conflict resolution, final validation, evidence, and closeout.
+- Do not let two active workers own the same files or contract surface.
+- If a task fails, replan or replace only that task. Do not repeat successful tasks without new evidence.
+- Use the runtime for graph state, dispatch, worker messages, and retries. Do not add a scheduler to the repository.
+- Keep the approved plan and durable results in repository-local plans and evidence.
+
 ## Delegation and Handoffs
 
 - Use delegation for bounded sidecar work that can run independently without blocking the immediate next local step.

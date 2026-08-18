@@ -2,7 +2,7 @@
 
 Status: canonical
 Owner: Platform Engineering
-Last Updated: 2026-07-13
+Last Updated: 2026-08-18
 Source of Truth: This directory.
 
 Reusable blueprint for bootstrapping high-quality agent-assisted software projects.
@@ -23,6 +23,8 @@ Reusable blueprint for bootstrapping high-quality agent-assisted software projec
 - Code quality is protected through small scope, explicit contracts, focused validation, reviewable evidence, and automated checks.
 - The blueprint is agent-portable: any capable coding agent should be able to rebuild context from repo-local artifacts.
 - The blueprint deliberately avoids a mandatory orchestration runtime; runtime-native goals, subagents, hooks, guardrails, traces, and background work should plug into repo-local plans and evidence instead of replacing them.
+- Runtime task graphs are useful when two or more ready tasks have disjoint ownership. `template/docs/agent-hardening/RUN_CONTROL.md` defines the planning contract.
+- The runtime owns graph state and worker dispatch. The repository owns the approved plan, checks, evidence, and closeout.
 - External issue trackers, hosting providers, and deployment platforms are optional integrations, not harness requirements.
 
 ## Start Here
