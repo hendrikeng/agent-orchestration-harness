@@ -25,6 +25,7 @@ Detailed current behavior, terminology, risks, and product-state notes live in `
 - Small, isolated, low-risk fixes may proceed directly when the PR carries enough review evidence.
 - Goal, subagent, handoff, hook, guardrail, trace, and background-run features may be used through runtime-native tools; the blueprint does not require a separate orchestration layer.
 - Use a task graph only when two or more ready tasks have disjoint ownership. Follow `docs/agent-hardening/RUN_CONTROL.md`.
+- Draft and blocked plans remain plan-only. Execution requires an active slice with satisfied dependencies and approvals.
 - The runtime owns graph execution. Repository-local plans, checks, evidence, and closeout remain authoritative.
 - Every meaningful change should leave the repository easier for the next engineer or agent to understand.
 

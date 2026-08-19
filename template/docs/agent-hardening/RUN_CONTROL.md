@@ -29,6 +29,10 @@ Source of Truth: This document.
 - If a task fails, replan or replace only that task. Do not repeat successful tasks without new evidence.
 - Use the runtime for graph state, dispatch, worker messages, and retries. Do not add a scheduler to the repository.
 - Keep the approved plan and durable results in repository-local plans and evidence.
+- If the objective names a future or active plan, read its status, dependencies, checklist, approval gates, and targets first.
+- Draft and blocked plans permit plan-only graphs. Do not dispatch implementation workers for them.
+- Promote a ready future through the repository workflow before execution. Execute only an active slice with satisfied dependencies and approvals.
+- If a future contains independent outcomes, split it into future files linked by `Dependencies`. Use graph tasks only inside one executable slice.
 
 ## Delegation and Handoffs
 
