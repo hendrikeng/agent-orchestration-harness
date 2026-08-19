@@ -180,6 +180,17 @@ test('harness-sync drift treats a missing manifest as drift', async () => {
   assert.equal(payload.driftDetected, true);
 });
 
+test('harness-sync drift reports non-file managed paths as modified JSON', async () => {
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-path-drift-'));
+  assert.equal(run(['install', '--target', targetDir]).status, 0);
+  await fs.rm(path.join(targetDir, 'AGENTS.md'));
+  await fs.mkdir(path.join(targetDir, 'AGENTS.md'));
+
+  const result = run(['drift', '--target', targetDir, '--json', 'true']);
+  assert.equal(result.status, 2, String(result.stderr));
+  assert.equal(JSON.parse(String(result.stdout)).modified.includes('AGENTS.md'), true);
+});
+
 test('harness-sync drift reports modified managed files', async () => {
   const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-drift-'));
   assert.equal(run(['install', '--target', targetDir]).status, 0);

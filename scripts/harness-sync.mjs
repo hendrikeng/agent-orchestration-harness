@@ -368,8 +368,8 @@ async function compareTarget(targetDir, sourceEntries, installedManifest = null)
     managedSet.add(entry.targetPath);
     const targetPath = path.join(targetDir, entry.targetPath);
     assertWithinDirectory(targetDir, targetPath, `managed file '${entry.targetPath}'`);
-    await assertTargetFileShape(targetDir, entry.targetPath);
     try {
+      await assertTargetFileShape(targetDir, entry.targetPath);
       const targetHash = await sha256(targetPath);
       if (targetHash !== entry.sha256) {
         modified.push(entry.targetPath);
@@ -378,6 +378,7 @@ async function compareTarget(targetDir, sourceEntries, installedManifest = null)
       }
     } catch (error) {
       if (error?.code === 'ENOENT') missing.push(entry.targetPath);
+      else if (/^\[TARGET_(?:PATH_CONFLICT|SYMLINK)\]/.test(error?.message)) modified.push(entry.targetPath);
       else throw error;
     }
   }
@@ -617,6 +618,8 @@ async function main() {
     process.exit(payload.driftDetected ? 2 : 0);
   }
 
+  await preflightTargetPaths(targetDir, sourceManifest, copySourceEntries, managedSourceEntries, installedManifest);
+
   if (command === 'install' && manifestState.exists) {
     throw new Error('[TARGET_ALREADY_INSTALLED] This target already has a harness manifest. Use update or drift.');
   }
@@ -645,7 +648,6 @@ async function main() {
     }
   }
 
-  await preflightTargetPaths(targetDir, sourceManifest, copySourceEntries, managedSourceEntries, installedManifest);
   await fs.mkdir(targetDir, { recursive: true });
   const writeResult = command === 'adopt'
     ? await adoptWithoutOverwrite(targetDir, sourceManifest, copySourceEntries, managedSourceEntries)
