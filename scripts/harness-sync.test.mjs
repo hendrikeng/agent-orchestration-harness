@@ -191,6 +191,17 @@ test('harness-sync drift reports non-file managed paths as modified JSON', async
   assert.equal(JSON.parse(String(result.stdout)).modified.includes('AGENTS.md'), true);
 });
 
+test('harness-sync drift reports intermediate non-directory paths as modified JSON', async () => {
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-parent-drift-'));
+  assert.equal(run(['install', '--target', targetDir]).status, 0);
+  await fs.rm(path.join(targetDir, 'docs'), { recursive: true });
+  await fs.writeFile(path.join(targetDir, 'docs'), 'occupied\n', 'utf8');
+
+  const result = run(['drift', '--target', targetDir, '--json', 'true']);
+  assert.equal(result.status, 2, String(result.stderr));
+  assert.equal(JSON.parse(String(result.stdout)).modified.some((entry) => entry.startsWith('docs/')), true);
+});
+
 test('harness-sync drift reports modified managed files', async () => {
   const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-drift-'));
   assert.equal(run(['install', '--target', targetDir]).status, 0);

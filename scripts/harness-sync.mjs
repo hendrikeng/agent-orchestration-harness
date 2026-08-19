@@ -93,6 +93,9 @@ async function assertNoTargetSymlink(targetDir, relativePath) {
       }
     } catch (error) {
       if (error?.code === 'ENOENT') return;
+      if (error?.code === 'ENOTDIR') {
+        throw new Error(`[TARGET_PATH_CONFLICT] Target file path '${relativePath}' has a non-directory parent.`);
+      }
       throw error;
     }
   }
