@@ -8,6 +8,9 @@ The goal is not to fill blanks mechanically. Each replacement should make the ad
 
 - `{{PRODUCT}}`
 - `{{SUMMARY}}`
+- `{{PRODUCT_DIRECTION}}`
+- `{{PRIMARY_USERS}}`
+- `{{TARGET_OUTCOMES}}`
 - `{{DOC_OWNER}}`
 - `{{LAST_UPDATED_ISO_DATE}}`
 - `{{CURRENT_STATE_DATE}}`

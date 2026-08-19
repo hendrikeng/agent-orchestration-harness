@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "compatibility": {
+    "mutationRuntime": "Node.js 24",
+    "existingProjectRequirement": "A package.json with an npm, pnpm, or yarn lockfile",
+    "unsupportedProjectMode": "audit-only",
+    "newProjectPackageManagers": ["npm"]
+  },
+  "sections": [
+    {
+      "id": "product",
+      "title": "Product and ownership",
+      "questions": [
+        { "id": "product-name", "prompt": "What is the product name?", "placeholders": ["PRODUCT"], "inferFrom": ["package.json name", "README title"] },
+        { "id": "summary", "prompt": "What does the product do in one sentence?", "placeholders": ["SUMMARY"], "inferFrom": ["README introduction", "product documentation"] },
+        { "id": "direction", "prompt": "What durable product direction must guide implementation?", "placeholders": ["PRODUCT_DIRECTION"], "inferFrom": ["VISION.md", "roadmap", "product requirements"] },
+        { "id": "users-outcomes", "prompt": "Who are the primary users, and which outcomes matter?", "placeholders": ["PRIMARY_USERS", "TARGET_OUTCOMES"], "inferFrom": ["README", "product requirements", "analytics goals"] },
+        { "id": "scope", "prompt": "Name the three primary product-scope responsibilities.", "placeholders": ["SCOPE1", "SCOPE2", "SCOPE3"], "inferFrom": ["routes", "services", "product documentation"] },
+        { "id": "owner-dates", "prompt": "Who owns canonical documentation, and which dates describe this adoption?", "placeholders": ["DOC_OWNER", "LAST_UPDATED_ISO_DATE", "CURRENT_STATE_DATE"], "inferFrom": ["CODEOWNERS", "git history", "current date"] }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "Architecture and stack",
+      "questions": [
+        { "id": "stacks", "prompt": "Describe the frontend, backend, and data stacks.", "placeholders": ["FRONTEND_STACK", "BACKEND_STACK", "DATA_STACK"], "inferFrom": ["package manifests", "lockfiles", "source tree", "deployment files"] },
+        { "id": "contracts", "prompt": "How do applications share contracts, types, and primitives?", "placeholders": ["SHARED_CONTRACT_STRATEGY"], "inferFrom": ["workspace packages", "generated clients", "schema folders"] },
+        { "id": "entrypoints", "prompt": "Name two frontend and two backend entrypoints or mark missing surfaces not applicable.", "placeholders": ["FRONTEND_ENTRYPOINT_1", "FRONTEND_ENTRYPOINT_2", "BACKEND_ENTRYPOINT_1", "BACKEND_ENTRYPOINT_2"], "inferFrom": ["framework configuration", "application bootstrap files", "routes"] },
+        { "id": "dependency-tags", "prompt": "Define two source-layer tags and their allowed target tags.", "placeholders": ["SOURCE_TAG_1", "SOURCE_TAG_2", "ALLOWED_TARGET_TAG_1A", "ALLOWED_TARGET_TAG_1B", "ALLOWED_TARGET_TAG_2A", "ALLOWED_TARGET_TAG_2B"], "inferFrom": ["architecture layers", "import boundaries"] },
+        { "id": "json-contracts", "prompt": "Name two governed JSON paths and their required root tags.", "placeholders": ["PROJECT_JSON_PATH_1", "PROJECT_JSON_PATH_2", "PROJECT_REQUIRED_TAG_1", "PROJECT_REQUIRED_TAG_2"], "inferFrom": ["tracked configuration", "schema files", "manifests"] }
+      ]
+    },
+    {
+      "id": "safety",
+      "title": "Invariants, security, and critical flows",
+      "questions": [
+        { "id": "authority", "prompt": "Which domains require correctness over speed, and which decisions must stay server-authoritative?", "placeholders": ["CRITICAL_DOMAIN_SET", "SERVER_AUTHORITY_BOUNDARY_SET"], "inferFrom": ["security docs", "authorization code", "data mutations"] },
+        { "id": "numeric", "prompt": "What numeric and money rule applies? Use not applicable only when the domain has no authoritative numeric risk.", "placeholders": ["MONEY_AND_NUMERIC_RULE"], "inferFrom": ["money types", "database schema", "billing code"], "default": "Use fixed-point or integer minor-unit math for financial values; never use binary floating-point money math." },
+        { "id": "invariants", "prompt": "Define three invariant areas with two concrete invariants each.", "placeholders": ["DOMAIN_INVARIANT_AREA_1", "DOMAIN_INVARIANT_1A", "DOMAIN_INVARIANT_1B", "DOMAIN_INVARIANT_AREA_2", "DOMAIN_INVARIANT_2A", "DOMAIN_INVARIANT_2B", "DOMAIN_INVARIANT_AREA_3", "DOMAIN_INVARIANT_3A", "DOMAIN_INVARIANT_3B"], "inferFrom": ["domain services", "database constraints", "security and reliability docs"] },
+        { "id": "critical-flows", "prompt": "Name three critical end-to-end flows that require explicit proof.", "placeholders": ["CRITICAL_FLOW_1", "CRITICAL_FLOW_2", "CRITICAL_FLOW_3"], "inferFrom": ["primary user journeys", "high-risk writes", "integration tests"] },
+        { "id": "out-of-scope", "prompt": "Name three explicit out-of-scope identifiers for the current project phase. Use lowercase snake_case.", "placeholders": ["OUT_OF_SCOPE_ITEM_1", "OUT_OF_SCOPE_ITEM_2", "OUT_OF_SCOPE_ITEM_3"], "inferFrom": ["roadmap", "future plans", "non-goals"] }
+      ]
+    },
+    {
+      "id": "tooling",
+      "title": "Tooling and quality gates",
+      "questions": [
+        { "id": "node-package-manager", "prompt": "Use Node 24. Which npm, pnpm, or yarn install command, matching cache name, and matching lockfile apply?", "placeholders": ["NODE_VERSION", "CI_INSTALL_COMMAND", "PACKAGE_MANAGER_CACHE", "PACKAGE_MANAGER_LOCKFILE"], "inferFrom": ["package.json engines", ".nvmrc", "lockfiles", "CI workflow"], "default": "Node.js 24 with the detected package manager" },
+        { "id": "project-commands", "prompt": "Which real commands run lint, typecheck, unit tests, and production build?", "placeholders": ["PROJECT_LINT_COMMAND", "PROJECT_TYPECHECK_COMMAND", "PROJECT_UNIT_TEST_COMMAND", "PROJECT_BUILD_COMMAND"], "inferFrom": ["package.json scripts", "CI workflow"] },
+        { "id": "lint-config", "prompt": "Where is the ESLint configuration?", "placeholders": ["ESLINT_CONFIG_PATH"], "inferFrom": ["eslint configuration files"] },
+        { "id": "quality-score", "prompt": "Score the six quality dimensions with evidence-based integer values and name two current gaps.", "placeholders": ["SCORE_DOMAIN_CORRECTNESS", "SCORE_CRITICAL_SAFETY", "SCORE_AUTHZ_BOUNDARIES", "SCORE_ARCH_BOUNDARIES", "SCORE_DOC_GOVERNANCE", "SCORE_CRITICAL_TESTS", "QUALITY_GAP_1", "QUALITY_GAP_2"], "inferFrom": ["tests", "docs", "architecture checks", "security controls"] }
+      ]
+    },
+    {
+      "id": "governance",
+      "title": "Ownership and conformance",
+      "questions": [
+        { "id": "codeowners", "prompt": "Which GitHub teams own default and security-sensitive paths? Use @org/team for both.", "placeholders": ["CODEOWNERS_DEFAULT_TEAM", "CODEOWNERS_SECURITY_TEAM"], "inferFrom": ["CODEOWNERS", "repository organization"] },
+        { "id": "conformance", "prompt": "Define the conformance profile name, purpose, source, generation time, CI workflow, and evidence path.", "placeholders": ["GENERATED_AT_UTC_ISO", "CONFORMANCE_SOURCE", "REPOSITORY_PROFILE_SNAKE_CASE", "CONFORMANCE_PURPOSE", "CI_WORKFLOW_PATH", "EVAL_EVIDENCE_PATH_1"], "inferFrom": ["repository name", "CI workflow", "current date", "docs"] },
+        { "id": "eval-runtime", "prompt": "Which provider and model produce the recorded agent evaluation evidence?", "placeholders": ["EVAL_PROVIDER", "EVAL_MODEL_ID"], "inferFrom": ["agent settings", "existing eval reports"] }
+      ]
+    }
+  ]
+}

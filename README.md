@@ -42,14 +42,26 @@ Reusable blueprint for bootstrapping high-quality agent-assisted software projec
 
 The bootstrap has two locations:
 
-- From this blueprint repo, install the template payload into the target repo.
+- From this blueprint repo, install or adopt the template payload in the target repo.
 - From the target repo, plan and execute adoption while the installed files still contain `{{...}}` placeholders.
 
-Install from this blueprint repo:
+Use `install` only for a new project. The command refuses existing blueprint paths that contain different content.
 
 ```bash
-node ./scripts/harness-sync.mjs install --target /path/to/target-repo
+node ./scripts/harness-sync.mjs install --target /path/to/new-project
 ```
+
+Use `adopt` for an existing Node.js project. The command copies missing files and preserves every existing file.
+
+```bash
+node ./scripts/harness-sync.mjs adopt --target /path/to/existing-project --json true
+```
+
+Use `drift` for a read-only comparison. An update refuses locally modified managed files unless the operator explicitly passes `--overwrite-modified true`.
+
+The current adoption workflow requires Node.js 24 and a `package.json` with an npm, pnpm, or yarn lockfile. New-project configuration currently creates an npm `package-lock.json` or `npm-shrinkwrap.json`. Other stacks can use audit mode, but automatic adoption is not yet supported.
+
+`distribution/bootstrap-questionnaire.json` is the machine-readable decision contract. It covers every placeholder and supplies inference hints for interactive tools. `scripts/bootstrap-configure.mjs` validates an approved decision packet, replaces governed placeholders, and merges non-conflicting package scripts. Interactive clients should call these blueprint-owned interfaces instead of copying their logic.
 
 The install copies `template/` into the target repository root. After install, paths lose the `template/` prefix: `template/PLACEHOLDERS.md` becomes `PLACEHOLDERS.md`, `template/AGENTS.md` becomes `AGENTS.md`, and `template/docs/...` becomes `docs/...`. `PLACEHOLDERS.md`, `package.scripts.fragment.json`, and the bootstrap verification/cleanup scripts are bootstrap-only helpers: they are copied for the first adoption pass but are not tracked as permanent harness-managed files. The sync manifest is written to `docs/ops/automation/harness-manifest.json`; downstream `.gitignore` is preserved.
 

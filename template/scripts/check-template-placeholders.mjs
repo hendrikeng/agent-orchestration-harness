@@ -4,7 +4,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const rootDir = process.cwd();
-const PLACEHOLDER_PATTERN = /\{\{[A-Z0-9_]+\}\}/;
+const PLACEHOLDER_PATTERN = /\{\{([A-Z0-9_]+)\}\}/g;
+const HARNESS_MANIFEST_PATH = 'docs/ops/automation/harness-manifest.json';
 const EXCLUDED_DIRECTORIES = new Set(['.git', 'node_modules']);
 const EXCLUDED_FILES = new Set(['PLACEHOLDERS.md']);
 
@@ -48,8 +49,23 @@ function collectFilesFromGit() {
     .sort((left, right) => left.localeCompare(right));
 }
 
+async function installedScope() {
+  try {
+    const manifest = JSON.parse(await fs.readFile(path.join(rootDir, HARNESS_MANIFEST_PATH), 'utf8'));
+    if (!Array.isArray(manifest.governedPlaceholders) || !Array.isArray(manifest.managedFiles)) return null;
+    return {
+      placeholders: new Set(manifest.governedPlaceholders),
+      paths: new Set(manifest.managedFiles.map((entry) => toPosix(entry.targetPath)))
+    };
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
 async function findPlaceholders() {
   const files = collectFilesFromGit() ?? await collectFiles();
+  const scope = await installedScope();
   const hits = [];
   for (const filePath of files) {
     let raw;
@@ -63,10 +79,10 @@ async function findPlaceholders() {
     }
     const lines = raw.split(/\r?\n/);
     const relPath = toPosix(path.relative(rootDir, filePath));
+    if (scope && !scope.paths.has(relPath)) continue;
     for (let index = 0; index < lines.length; index += 1) {
-      if (PLACEHOLDER_PATTERN.test(lines[index])) {
-        hits.push(`${relPath}:${index + 1}:${lines[index]}`);
-      }
+      const tokens = [...lines[index].matchAll(PLACEHOLDER_PATTERN)].map((match) => match[1]);
+      if (tokens.some((token) => !scope || scope.placeholders.has(token))) hits.push(`${relPath}:${index + 1}:${lines[index]}`);
     }
   }
   return hits;

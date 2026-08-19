@@ -1,0 +1,203 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const scriptPath = path.join(rootDir, 'scripts', 'bootstrap-configure.mjs');
+const harnessSyncPath = path.join(rootDir, 'scripts', 'harness-sync.mjs');
+const questionnairePath = path.join(rootDir, 'distribution', 'bootstrap-questionnaire.json');
+
+async function decisions() {
+  const questionnaire = JSON.parse(await fs.readFile(questionnairePath, 'utf8'));
+  const values = {};
+  for (const placeholder of questionnaire.sections.flatMap((section) => section.questions.flatMap((question) => question.placeholders))) {
+    values[placeholder] = placeholder.startsWith('SCORE_') ? '4' : placeholder.toLowerCase();
+  }
+  values.LAST_UPDATED_ISO_DATE = '2026-03-22';
+  values.CURRENT_STATE_DATE = '2026-03-22';
+  values.GENERATED_AT_UTC_ISO = '2026-03-22T12:00:00.000Z';
+  values.PRODUCT = 'Configured Project';
+  values.PROJECT_LINT_COMMAND = 'eslint "src/**/*.ts"';
+  values.NODE_VERSION = '24';
+  values.CI_INSTALL_COMMAND = 'npm ci';
+  values.PACKAGE_MANAGER_CACHE = 'npm';
+  values.CODEOWNERS_DEFAULT_TEAM = '@acme/platform';
+  values.CODEOWNERS_SECURITY_TEAM = '@acme/security';
+  values.PACKAGE_MANAGER_LOCKFILE = 'package-lock.json';
+  return { schemaVersion: 1, values };
+}
+
+test('bootstrap configure changes only installed template files and keeps JSON valid', async () => {
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bootstrap-configure-'));
+  assert.equal(spawnSync(process.execPath, [harnessSyncPath, 'install', '--target', targetDir]).status, 0);
+  await fs.writeFile(path.join(targetDir, 'application-template.txt'), '{{PRODUCT}} must stay untouched\n', 'utf8');
+  await fs.writeFile(path.join(targetDir, 'package.json'), JSON.stringify({ name: 'existing', scripts: { 'verify:fast': '' } }), 'utf8');
+  const packetPath = path.join(targetDir, 'docs', 'ops', 'automation', 'bootstrap-decisions.json');
+  const packet = await decisions();
+  packet.values.CI_INSTALL_COMMAND = 'pnpm --filter "@acme/*\\tools" install';
+  packet.values.PACKAGE_MANAGER_CACHE = 'pnpm';
+  packet.values.PACKAGE_MANAGER_LOCKFILE = 'pnpm-lock.yaml';
+  await fs.writeFile(path.join(targetDir, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n", 'utf8');
+  await fs.writeFile(packetPath, JSON.stringify(packet), 'utf8');
+
+  const result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath, '--json', 'true'], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.changedFiles.includes('README.md'), true);
+  assert.equal(payload.scriptConflicts.includes('verify:fast'), true);
+  assert.match(await fs.readFile(path.join(targetDir, 'README.md'), 'utf8'), /Configured Project/);
+  assert.equal(await fs.readFile(path.join(targetDir, 'application-template.txt'), 'utf8'), '{{PRODUCT}} must stay untouched\n');
+  const projectGates = JSON.parse(await fs.readFile(path.join(targetDir, 'docs', 'governance', 'project-gates.json'), 'utf8'));
+  assert.equal(JSON.stringify(projectGates).includes('eslint \\"src/**/*.ts\\"'), true);
+  const workflow = await fs.readFile(path.join(targetDir, '.github', 'workflows', 'ci.yml'), 'utf8');
+  assert.equal(workflow.includes(`CI_INSTALL_COMMAND: ${JSON.stringify('pnpm --filter "@acme/*\\tools" install')}`), true);
+  const packageJson = JSON.parse(await fs.readFile(path.join(targetDir, 'package.json'), 'utf8'));
+  assert.equal(packageJson.scripts['verify:fast'], '');
+  assert.equal(typeof packageJson.scripts['verify:full'], 'string');
+});
+
+test('bootstrap configure accepts matching source files without Git metadata', async () => {
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bootstrap-configure-no-git-'));
+  const env = { ...process.env, PATH: path.dirname(process.execPath) };
+  assert.equal(spawnSync(process.execPath, [harnessSyncPath, 'install', '--target', targetDir], { env }).status, 0);
+  const packetPath = path.join(targetDir, 'docs', 'ops', 'automation', 'bootstrap-decisions.json');
+  await fs.writeFile(packetPath, JSON.stringify(await decisions()), 'utf8');
+
+  const result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8', env });
+  assert.equal(result.status, 0, result.stderr);
+  const lockfile = JSON.parse(await fs.readFile(path.join(targetDir, 'package-lock.json'), 'utf8'));
+  assert.equal(lockfile.lockfileVersion, 3);
+});
+
+test('bootstrap configure reports edited template placeholders before writing any replacements', async () => {
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bootstrap-configure-edited-'));
+  assert.equal(spawnSync(process.execPath, [harnessSyncPath, 'install', '--target', targetDir]).status, 0);
+  await fs.writeFile(path.join(targetDir, 'README.md'), '# Custom {{PRODUCT}}\n', 'utf8');
+  const packetPath = path.join(targetDir, 'docs', 'ops', 'automation', 'bootstrap-decisions.json');
+  await fs.writeFile(packetPath, JSON.stringify(await decisions()), 'utf8');
+
+  const result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Edited template files still contain governed placeholders: README.md/);
+  assert.match(await fs.readFile(path.join(targetDir, 'VISION.md'), 'utf8'), /\{\{DOC_OWNER\}\}/);
+});
+
+test('bootstrap configure rejects missing managed files before replacing anything', async () => {
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bootstrap-configure-missing-file-'));
+  assert.equal(spawnSync(process.execPath, [harnessSyncPath, 'install', '--target', targetDir]).status, 0);
+  await fs.rm(path.join(targetDir, 'VISION.md'));
+  const packetPath = path.join(targetDir, 'docs', 'ops', 'automation', 'bootstrap-decisions.json');
+  await fs.writeFile(packetPath, JSON.stringify(await decisions()), 'utf8');
+
+  const result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Installed harness file is missing: VISION.md/);
+  assert.match(await fs.readFile(path.join(targetDir, 'README.md'), 'utf8'), /\{\{PRODUCT\}\}/);
+});
+
+test('bootstrap configure rejects incomplete managed file manifests before replacing files', async () => {
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bootstrap-configure-incomplete-manifest-'));
+  assert.equal(spawnSync(process.execPath, [harnessSyncPath, 'install', '--target', targetDir]).status, 0);
+  const packetPath = path.join(targetDir, 'docs', 'ops', 'automation', 'bootstrap-decisions.json');
+  await fs.writeFile(packetPath, JSON.stringify(await decisions()), 'utf8');
+  const manifestPath = path.join(targetDir, 'docs', 'ops', 'automation', 'harness-manifest.json');
+  const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  manifest.managedFiles = manifest.managedFiles.filter((entry) => entry.targetPath !== 'README.md');
+  await fs.writeFile(manifestPath, JSON.stringify(manifest), 'utf8');
+
+  const result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /does not contain the complete managed file set/);
+  assert.match(await fs.readFile(path.join(targetDir, 'README.md'), 'utf8'), /\{\{PRODUCT\}\}/);
+});
+
+test('bootstrap configure rejects malformed package.json before replacing files', async () => {
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bootstrap-configure-package-'));
+  assert.equal(spawnSync(process.execPath, [harnessSyncPath, 'install', '--target', targetDir]).status, 0);
+  await fs.writeFile(path.join(targetDir, 'package.json'), '{', 'utf8');
+  const packetPath = path.join(targetDir, 'docs', 'ops', 'automation', 'bootstrap-decisions.json');
+  await fs.writeFile(packetPath, JSON.stringify(await decisions()), 'utf8');
+
+  const result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /JSON/);
+  assert.match(await fs.readFile(path.join(targetDir, 'VISION.md'), 'utf8'), /\{\{DOC_OWNER\}\}/);
+});
+
+test('bootstrap configure rejects unsupported packet versions and invalid dates', async () => {
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bootstrap-configure-contract-'));
+  assert.equal(spawnSync(process.execPath, [harnessSyncPath, 'install', '--target', targetDir]).status, 0);
+  const packetPath = path.join(targetDir, 'docs', 'ops', 'automation', 'bootstrap-decisions.json');
+  const packet = await decisions();
+  packet.schemaVersion = 2;
+  await fs.writeFile(packetPath, JSON.stringify(packet), 'utf8');
+  let result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Unsupported decision packet schemaVersion/);
+
+  packet.schemaVersion = 1;
+  packet.values.CURRENT_STATE_DATE = '2026-02-31';
+  await fs.writeFile(packetPath, JSON.stringify(packet), 'utf8');
+  result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /valid YYYY-MM-DD calendar date/);
+
+  packet.values.CURRENT_STATE_DATE = '2026-03-22';
+  packet.values.PACKAGE_MANAGER_CACHE = 'pnpm';
+  await fs.writeFile(packetPath, JSON.stringify(packet), 'utf8');
+  result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /must describe the same npm, pnpm, or yarn toolchain/);
+
+  packet.values.PACKAGE_MANAGER_CACHE = 'npm';
+  packet.values.SUMMARY = '{{UNKNOWN_VALUE}}';
+  await fs.writeFile(packetPath, JSON.stringify(packet), 'utf8');
+  result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /without placeholder tokens/);
+
+  packet.values.SUMMARY = 'summary';
+  packet.values.CODEOWNERS_DEFAULT_TEAM = 'platform';
+  await fs.writeFile(packetPath, JSON.stringify(packet), 'utf8');
+  result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /CODEOWNERS_DEFAULT_TEAM must use @org\/team format/);
+
+  packet.values.CODEOWNERS_DEFAULT_TEAM = '@acme/platform';
+  packet.values.OUT_OF_SCOPE_ITEM_2 = packet.values.OUT_OF_SCOPE_ITEM_1;
+  await fs.writeFile(packetPath, JSON.stringify(packet), 'utf8');
+  result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /OUT_OF_SCOPE_ITEM values must be unique/);
+
+  packet.values.OUT_OF_SCOPE_ITEM_2 = 'out_of_scope_item_2';
+  packet.values.PRODUCT = '!!!';
+  await fs.writeFile(packetPath, JSON.stringify(packet), 'utf8');
+  result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /non-empty npm package name/);
+
+  packet.values.PRODUCT = 'Configured Project';
+  await fs.writeFile(packetPath, JSON.stringify(packet), 'utf8');
+  const manifestPath = path.join(targetDir, 'docs', 'ops', 'automation', 'harness-manifest.json');
+  const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  manifest.sourceRevision = 'different-revision';
+  await fs.writeFile(manifestPath, JSON.stringify(manifest), 'utf8');
+  result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Blueprint source revision does not match/);
+});
+
+test('bootstrap configure refuses incomplete decision packets', async () => {
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bootstrap-configure-missing-'));
+  assert.equal(spawnSync(process.execPath, [harnessSyncPath, 'install', '--target', targetDir]).status, 0);
+  const packetPath = path.join(targetDir, 'decisions.json');
+  await fs.writeFile(packetPath, JSON.stringify({ schemaVersion: 1, values: { PRODUCT: 'Incomplete' } }), 'utf8');
+  const result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Missing placeholder decision/);
+});

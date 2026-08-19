@@ -47,7 +47,7 @@ function asBoolean(value, fallback = false) {
 
 function usage() {
   process.stderr.write(
-    'Usage: node ./scripts/harness-sync.mjs <install|update|drift> --target <path> [--json true|false]\n'
+    'Usage: node ./scripts/harness-sync.mjs <install|adopt|update|drift> --target <path> [--json true|false] [--overwrite-modified true|false]\n'
   );
 }
 
@@ -81,6 +81,53 @@ function assertSafeRelativePath(relativePath, label) {
     throw new Error(`${label} must be a non-empty repository-relative path: ${String(relativePath)}`);
   }
   return normalized;
+}
+
+async function assertNoTargetSymlink(targetDir, relativePath) {
+  let current = targetDir;
+  for (const segment of assertSafeRelativePath(relativePath, 'target path').split('/')) {
+    current = path.join(current, segment);
+    try {
+      if ((await fs.lstat(current)).isSymbolicLink()) {
+        throw new Error(`[TARGET_SYMLINK] Target path '${relativePath}' traverses a symbolic link.`);
+      }
+    } catch (error) {
+      if (error?.code === 'ENOENT') return;
+      throw error;
+    }
+  }
+}
+
+async function assertTargetFileShape(targetDir, relativePath) {
+  await assertNoTargetSymlink(targetDir, relativePath);
+  try {
+    if (!(await fs.lstat(path.join(targetDir, relativePath))).isFile()) {
+      throw new Error(`[TARGET_PATH_CONFLICT] Target file path '${relativePath}' is occupied by a non-file.`);
+    }
+  } catch (error) {
+    if (error?.code === 'ENOENT') return;
+    throw error;
+  }
+}
+
+async function canonicalTargetPath(value) {
+  const absolute = path.resolve(value);
+  try {
+    return await fs.realpath(absolute);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+  const missing = [];
+  let current = absolute;
+  while (true) {
+    missing.unshift(path.basename(current));
+    current = path.dirname(current);
+    try {
+      return path.join(await fs.realpath(current), ...missing);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+  }
 }
 
 async function readJson(filePath) {
@@ -186,7 +233,7 @@ function gitHeadRevision() {
   return value || null;
 }
 
-async function collectSourceFiles(manifest, { includeBootstrapOnly = false } = {}) {
+export async function collectSourceFiles(manifest, { includeBootstrapOnly = false } = {}) {
   const sourceRoot = path.join(rootDir, manifest.sourceRoot);
   const targetRoot = String(manifest.targetRoot ?? '.').trim() || '.';
   assertWithinDirectory(rootDir, sourceRoot, 'sourceRoot');
@@ -321,6 +368,7 @@ async function compareTarget(targetDir, sourceEntries, installedManifest = null)
     managedSet.add(entry.targetPath);
     const targetPath = path.join(targetDir, entry.targetPath);
     assertWithinDirectory(targetDir, targetPath, `managed file '${entry.targetPath}'`);
+    await assertTargetFileShape(targetDir, entry.targetPath);
     try {
       const targetHash = await sha256(targetPath);
       if (targetHash !== entry.sha256) {
@@ -328,8 +376,9 @@ async function compareTarget(targetDir, sourceEntries, installedManifest = null)
       } else {
         exact.push(entry.targetPath);
       }
-    } catch {
-      missing.push(entry.targetPath);
+    } catch (error) {
+      if (error?.code === 'ENOENT') missing.push(entry.targetPath);
+      else throw error;
     }
   }
 
@@ -351,14 +400,26 @@ async function compareTarget(targetDir, sourceEntries, installedManifest = null)
   };
 }
 
+async function governedPlaceholders(sourceEntries) {
+  const placeholders = new Set();
+  for (const entry of sourceEntries) {
+    const content = await fs.readFile(path.join(rootDir, entry.sourcePath), 'utf8');
+    for (const match of content.matchAll(/\{\{([A-Z0-9_]+)\}\}/g)) placeholders.add(match[1]);
+  }
+  return [...placeholders].sort((left, right) => left.localeCompare(right));
+}
+
 async function writeDownstreamManifest(targetDir, manifest, sourceEntries) {
-  const downstreamManifestPath = path.join(targetDir, downstreamManifestRel(manifest));
+  const manifestRel = downstreamManifestRel(manifest);
+  const downstreamManifestPath = path.join(targetDir, manifestRel);
+  await assertNoTargetSymlink(targetDir, manifestRel);
   const payload = prepareContractPayload(CONTRACT_IDS.downstreamHarnessManifest, {
     ownershipMode: manifest.ownershipMode,
     sourceManifest: sourceManifestId,
     sourceManifestSha256: await sha256(sourceManifestPath),
     sourceRevision: gitHeadRevision(),
     installedAt: new Date().toISOString(),
+    governedPlaceholders: await governedPlaceholders(sourceEntries),
     managedFiles: sourceEntries
   });
   await writeTextFileAtomic(downstreamManifestPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
@@ -392,11 +453,92 @@ async function removeRetiredManagedFiles(targetDir, sourceEntries, installedMani
     }
     const targetPathAbs = path.join(targetDir, targetPathRel);
     assertWithinDirectory(targetDir, targetPathAbs, `retired managed file '${targetPathRel}'`);
+    await assertNoTargetSymlink(targetDir, targetPathRel);
     await fs.rm(targetPathAbs, { force: true }).catch(() => {});
     await pruneEmptyDirectories(targetDir, path.dirname(targetPathAbs));
     removed.push(targetPathRel);
   }
   return removed.sort((left, right) => left.localeCompare(right));
+}
+
+async function adoptWithoutOverwrite(targetDir, manifest, copyEntries, managedEntries) {
+  const copied = [];
+  const preserved = [];
+  for (const entry of copyEntries) {
+    const sourcePath = path.join(rootDir, entry.sourcePath);
+    const targetPath = path.join(targetDir, entry.targetPath);
+    assertWithinDirectory(rootDir, sourcePath, `source file '${entry.sourcePath}'`);
+    assertWithinDirectory(targetDir, targetPath, `target file '${entry.targetPath}'`);
+    await assertNoTargetSymlink(targetDir, entry.targetPath);
+    try {
+      const currentHash = await sha256(targetPath);
+      if (currentHash !== entry.sha256) preserved.push(entry.targetPath);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+      await fs.mkdir(path.dirname(targetPath), { recursive: true });
+      await fs.copyFile(sourcePath, targetPath);
+      copied.push(entry.targetPath);
+    }
+  }
+  await writeDownstreamManifest(targetDir, manifest, managedEntries);
+  return { copied, preserved };
+}
+
+async function locallyModifiedManagedFiles(targetDir, installedManifest, sourceEntries) {
+  const modified = [];
+  const installed = new Map((installedManifest?.managedFiles ?? []).map((entry) => [entry.targetPath, entry]));
+  const incoming = new Map(sourceEntries.map((entry) => [entry.targetPath, entry]));
+  for (const entry of installed.values()) {
+    const targetPathRel = assertSafeRelativePath(entry.targetPath, 'installed managed targetPath');
+    try {
+      const currentHash = await sha256(path.join(targetDir, targetPathRel));
+      const incomingHash = incoming.get(targetPathRel)?.sha256;
+      if (currentHash !== entry.sha256 && currentHash !== incomingHash) modified.push(targetPathRel);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+  }
+  for (const entry of sourceEntries) {
+    if (installed.has(entry.targetPath)) continue;
+    try {
+      if (await sha256(path.join(targetDir, entry.targetPath)) !== entry.sha256) modified.push(entry.targetPath);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+  }
+  return [...new Set(modified)].sort((left, right) => left.localeCompare(right));
+}
+
+async function assertAdoptionCompatibility(targetDir) {
+  const packagePath = path.join(targetDir, 'package.json');
+  let packageStat;
+  try {
+    packageStat = await fs.lstat(packagePath);
+  } catch (error) {
+    if (error?.code === 'ENOENT') throw new Error('[ADOPTION_UNSUPPORTED] Adopt requires package.json and an npm, pnpm, or yarn lockfile. Use drift for audit-only repositories.');
+    throw error;
+  }
+  if (!packageStat.isFile() || packageStat.isSymbolicLink()) throw new Error('[ADOPTION_UNSUPPORTED] package.json must be a regular file.');
+  const lockfiles = ['package-lock.json', 'npm-shrinkwrap.json', 'pnpm-lock.yaml', 'yarn.lock'];
+  for (const lockfile of lockfiles) {
+    try {
+      const lockStat = await fs.lstat(path.join(targetDir, lockfile));
+      if (lockStat.isFile() && !lockStat.isSymbolicLink()) return;
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+  }
+  throw new Error('[ADOPTION_UNSUPPORTED] Adopt requires an npm, pnpm, or yarn lockfile. Use drift until the package manager is explicit.');
+}
+
+async function preflightTargetPaths(targetDir, manifest, copyEntries, managedEntries, installedManifest) {
+  for (const entry of copyEntries) await assertTargetFileShape(targetDir, entry.targetPath);
+  await assertTargetFileShape(targetDir, downstreamManifestRel(manifest));
+  const currentManaged = new Set(managedEntries.map((entry) => entry.targetPath));
+  for (const entry of installedManifest?.managedFiles ?? []) {
+    const targetPathRel = assertSafeRelativePath(entry.targetPath, 'installed managed targetPath');
+    if (!currentManaged.has(targetPathRel)) await assertTargetFileShape(targetDir, targetPathRel);
+  }
 }
 
 async function installOrUpdate(targetDir, manifest, copyEntries, managedEntries, installedManifest = null) {
@@ -407,6 +549,7 @@ async function installOrUpdate(targetDir, manifest, copyEntries, managedEntries,
     const targetPath = path.join(targetDir, entry.targetPath);
     assertWithinDirectory(rootDir, sourcePath, `source file '${entry.sourcePath}'`);
     assertWithinDirectory(targetDir, targetPath, `target file '${entry.targetPath}'`);
+    await assertNoTargetSymlink(targetDir, entry.targetPath);
     await fs.mkdir(path.dirname(targetPath), { recursive: true });
     await fs.copyFile(sourcePath, targetPath);
     copied.push(entry.targetPath);
@@ -417,7 +560,7 @@ async function installOrUpdate(targetDir, manifest, copyEntries, managedEntries,
 
 async function main() {
   const { command, options } = parseArgs(process.argv.slice(2));
-  if (!['install', 'update', 'drift'].includes(command)) {
+  if (!['install', 'adopt', 'update', 'drift'].includes(command)) {
     usage();
     process.exit(1);
   }
@@ -428,7 +571,7 @@ async function main() {
     process.exit(1);
   }
 
-  const targetDir = path.resolve(targetDirRaw);
+  const targetDir = await canonicalTargetPath(targetDirRaw);
   if (targetDir === rootDir || isWithinDirectory(path.join(rootDir, 'template'), targetDir)) {
     throw new Error('Target must be an adopted repository, not the blueprint root or template directory.');
   }
@@ -441,10 +584,14 @@ async function main() {
     .map((entry) => entry.targetPath)
     .filter((targetPath) => !managedTargets.has(targetPath))
     .sort((left, right) => left.localeCompare(right));
-  const copySourceEntries = command === 'install' ? allSourceEntries : managedSourceEntries;
+  const copySourceEntries = command === 'install' || command === 'adopt' ? allSourceEntries : managedSourceEntries;
   const manifestState = await loadDownstreamManifest(targetDir, sourceManifest);
+  const manifestValidation = validateDownstreamManifest(manifestState, sourceManifest);
   const installedManifest = manifestState.valid ? manifestState.manifest : null;
   const drift = await compareTarget(targetDir, managedSourceEntries, installedManifest);
+  const fullTemplateDrift = command === 'install' || command === 'adopt'
+    ? await compareTarget(targetDir, allSourceEntries, installedManifest)
+    : drift;
 
   if (command === 'drift') {
     const payload = {
@@ -457,7 +604,9 @@ async function main() {
       managedFileCount: managedSourceEntries.length,
       templatePayloadFileCount: allSourceEntries.length,
       unexpectedManaged: drift.unexpectedManaged,
-      driftDetected: drift.missing.length > 0 || drift.modified.length > 0 || drift.unexpectedManaged.length > 0
+      manifestStatus: manifestValidation.ok ? 'valid' : manifestState.exists ? 'invalid' : 'missing',
+      manifestIssue: manifestValidation.ok ? null : { code: manifestValidation.code, message: manifestValidation.message },
+      driftDetected: !manifestValidation.ok || drift.missing.length > 0 || drift.modified.length > 0 || drift.unexpectedManaged.length > 0
     };
     if (jsonOutput) {
       process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
@@ -468,38 +617,66 @@ async function main() {
     process.exit(payload.driftDetected ? 2 : 0);
   }
 
-  if (command === 'update') {
-    const manifestValidation = validateDownstreamManifest(manifestState, sourceManifest);
-    if (!manifestValidation.ok) {
-      throw new Error(`[${manifestValidation.code}] ${manifestValidation.message}`);
+  if (command === 'install' && manifestState.exists) {
+    throw new Error('[TARGET_ALREADY_INSTALLED] This target already has a harness manifest. Use update or drift.');
+  }
+  if (command === 'install' && fullTemplateDrift.modified.length > 0) {
+    throw new Error('[INSTALL_TARGET_NOT_EMPTY] Install refuses existing blueprint paths. Use adopt to preserve existing files.');
+  }
+
+  if (command === 'adopt' && manifestState.exists) {
+    throw new Error('[TARGET_ALREADY_ADOPTED] This target already has a harness manifest. Use update or drift.');
+  }
+  if (command === 'adopt') {
+    await assertAdoptionCompatibility(targetDir);
+    const bootstrapConflicts = fullTemplateDrift.modified.filter((targetPath) => bootstrapOnly.includes(targetPath));
+    if (bootstrapConflicts.length > 0) {
+      throw new Error(`[BOOTSTRAP_PATH_CONFLICT] Resolve existing bootstrap helper path(s) before adoption: ${bootstrapConflicts.join(', ')}`);
     }
   }
 
+  if (command === 'update') {
+    if (!manifestValidation.ok) {
+      throw new Error(`[${manifestValidation.code}] ${manifestValidation.message}`);
+    }
+    const locallyModified = await locallyModifiedManagedFiles(targetDir, installedManifest, managedSourceEntries);
+    if (locallyModified.length > 0 && !asBoolean(options['overwrite-modified'], false)) {
+      throw new Error(`[MODIFIED_MANAGED_FILES] Update refuses ${locallyModified.length} locally modified managed file(s). Review drift or pass --overwrite-modified true.`);
+    }
+  }
+
+  await preflightTargetPaths(targetDir, sourceManifest, copySourceEntries, managedSourceEntries, installedManifest);
   await fs.mkdir(targetDir, { recursive: true });
-  const writeResult = await installOrUpdate(
-    targetDir,
-    sourceManifest,
-    copySourceEntries,
-    managedSourceEntries,
-    installedManifest
-  );
+  const writeResult = command === 'adopt'
+    ? await adoptWithoutOverwrite(targetDir, sourceManifest, copySourceEntries, managedSourceEntries)
+    : await installOrUpdate(
+      targetDir,
+      sourceManifest,
+      copySourceEntries,
+      managedSourceEntries,
+      installedManifest
+    );
   const payload = {
     command,
     target: targetDir,
     filesCopied: writeResult.copied.length,
-    filesRemoved: writeResult.removed.length,
+    filesRemoved: writeResult.removed?.length ?? 0,
+    filesPreserved: writeResult.preserved?.length ?? 0,
+    preserved: writeResult.preserved ?? [],
     manifestPath: toPosix(path.join(targetDir, downstreamManifestRel(sourceManifest)))
   };
   if (jsonOutput) {
     process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   } else {
     process.stdout.write(
-      `[harness-sync] ${command} target=${payload.target} filesCopied=${payload.filesCopied} filesRemoved=${payload.filesRemoved}\n`
+      `[harness-sync] ${command} target=${payload.target} filesCopied=${payload.filesCopied} filesRemoved=${payload.filesRemoved} filesPreserved=${payload.filesPreserved}\n`
     );
   }
 }
 
-main().catch((error) => {
-  process.stderr.write(`[harness-sync] ${error instanceof Error ? error.message : String(error)}\n`);
-  process.exit(1);
-});
+if (path.resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    process.stderr.write(`[harness-sync] ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(1);
+  });
+}

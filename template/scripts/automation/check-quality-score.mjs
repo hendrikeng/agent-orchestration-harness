@@ -25,7 +25,7 @@ const requiredQualityScoreLabels = [
 ];
 const findingHints = new Map([
   ['MISSING_QUALITY_SCORE_DOC', 'Create docs/QUALITY_SCORE.md from the harness template and fill the owner, date, and six rubric rows.'],
-  ['UNCLEAR_QUALITY_OWNER', 'Set Owner to the accountable team or person; avoid placeholders such as owner, TBD, or {{DOC_OWNER}}.'],
+  ['UNCLEAR_QUALITY_OWNER', 'Set Owner to the accountable team or person; avoid generic placeholders such as owner, TBD, or DOC_OWNER.'],
   ['MISSING_QUALITY_TIMESTAMP', 'Add Last Updated in YYYY-MM-DD format.'],
   ['INVALID_QUALITY_TIMESTAMP', 'Use an ISO date such as 2026-05-12.'],
   ['FUTURE_QUALITY_TIMESTAMP', 'Set Last Updated to today or the last real review date.'],
