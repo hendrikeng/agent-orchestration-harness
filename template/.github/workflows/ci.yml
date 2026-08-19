@@ -46,9 +46,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: ${{ env.PACKAGE_MANAGER_CACHE }}
-          cache-dependency-path: ${{ env.PACKAGE_MANAGER_LOCKFILE }}
-
+      - run: corepack enable
       - run: ${{ env.CI_INSTALL_COMMAND }}
       - run: npm run eval:refresh && git diff --exit-code -- docs/generated/evals-report.json
       - run: npm run pr:verify
@@ -76,9 +74,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: ${{ env.PACKAGE_MANAGER_CACHE }}
-          cache-dependency-path: ${{ env.PACKAGE_MANAGER_LOCKFILE }}
-
+      - run: corepack enable
       - run: ${{ env.CI_INSTALL_COMMAND }}
       - run: npm run verify:full
 
@@ -98,9 +94,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: ${{ env.PACKAGE_MANAGER_CACHE }}
-          cache-dependency-path: ${{ env.PACKAGE_MANAGER_LOCKFILE }}
-
+      - run: corepack enable
       - run: ${{ env.CI_INSTALL_COMMAND }}
       - name: Verify release candidate PR
         if: github.event_name == 'pull_request'

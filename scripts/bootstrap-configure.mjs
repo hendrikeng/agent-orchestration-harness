@@ -178,7 +178,7 @@ async function packagePlan(targetDir, values) {
   } catch (error) {
     if (error?.code !== 'ENOENT') throw error;
     const name = values.PRODUCT.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^[._-]+|[._-]+$/g, '');
-    if (!name || name.length > 214) throw new Error('PRODUCT must produce a non-empty npm package name of at most 214 characters.');
+    if (!name || name.length > 214 || ['node_modules', 'favicon.ico'].includes(name)) throw new Error('PRODUCT must produce a non-empty npm package name of at most 214 characters and must not use a reserved name.');
     if (!['package-lock.json', 'npm-shrinkwrap.json'].includes(values.PACKAGE_MANAGER_LOCKFILE)) {
       throw new Error('New projects currently require PACKAGE_MANAGER_LOCKFILE to be package-lock.json or npm-shrinkwrap.json.');
     }

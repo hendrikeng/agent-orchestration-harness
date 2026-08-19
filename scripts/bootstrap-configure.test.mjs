@@ -55,6 +55,7 @@ test('bootstrap configure changes only installed template files and keeps JSON v
   assert.equal(JSON.stringify(projectGates).includes('eslint \\"src/**/*.ts\\"'), true);
   const workflow = await fs.readFile(path.join(targetDir, '.github', 'workflows', 'ci.yml'), 'utf8');
   assert.equal(workflow.includes(`CI_INSTALL_COMMAND: ${JSON.stringify('pnpm --filter "@acme/*\\tools" install')}`), true);
+  assert.equal(workflow.match(/- run: corepack enable/g)?.length, 3);
   const packageJson = JSON.parse(await fs.readFile(path.join(targetDir, 'package.json'), 'utf8'));
   assert.equal(packageJson.scripts['verify:fast'], '');
   assert.equal(typeof packageJson.scripts['verify:full'], 'string');
@@ -180,6 +181,12 @@ test('bootstrap configure rejects unsupported packet versions and invalid dates'
   result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /non-empty npm package name/);
+
+  packet.values.PRODUCT = 'node_modules';
+  await fs.writeFile(packetPath, JSON.stringify(packet), 'utf8');
+  result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /reserved name/);
 
   packet.values.PRODUCT = 'Configured Project';
   await fs.writeFile(packetPath, JSON.stringify(packet), 'utf8');
