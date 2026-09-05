@@ -48,23 +48,44 @@ Source of Truth: This document.
 
 - Config source of truth: `docs/agent-hardening/evals.config.json`.
 - Generated report artifact: `docs/generated/evals-report.json`.
-- Refresh command: `npm run eval:refresh`.
+- Refresh command: `npm run eval:refresh`. This command does not run evaluations.
+- New reports start with `status: not-run` and zero results. Bootstrap cannot convert these defaults into a passing run.
 - Verifier command: `npm run eval:verify`.
 - Required report fields:
+  - `status`: `pass` only after the required suites complete successfully
   - `generatedAtUtc` (provenance only in content-addressed mode)
   - `inputSha256` when `freshnessMode` is `content-addressed`
   - `summary.total`, `summary.passed`, `summary.failed`, `summary.passRate`
   - `regressions.criticalOpen`, `regressions.highOpen`
-  - `suites[]` with `id`, `status`, `total`, `passed`, `failed`
+  - `suites[]` with `id`, `status`, `total`, `passed`, `failed`, and `execution`
+  - Each `execution` names `runner`, `executedAtUtc`, `inputSha256`, `fixtureIds`, and a repository-local `evidence` path.
   - `evidence[]` repository-local references
 - Recommended report fields:
   - `provider`, `model`, and runtime or prompt version where available
   - suite-level `evidence` and failure class counts when the runner supports them
   - links to incident, plan, PR, or evidence-index entries for accepted exceptions
 - Gate policy:
-  - Content-addressed reports must match the current config, policy docs, and failure fixtures; `npm run eval:refresh` updates the deterministic input hash without fabricating a new execution timestamp.
+  - Content-addressed reports must match `AGENTS.md`, the policy manifest, eval policy, run control, tool policy, config, and failure fixtures.
+  - If inputs change, `npm run eval:refresh` resets results to `not-run` and removes execution references. It preserves the previous timestamp.
+  - Refreshing unchanged inputs preserves results. It never creates execution evidence or grants a pass.
   - Time-bound reports, when configured, must satisfy `maxAgeDays`.
   - Pass-rate must satisfy `minimumPassRate`.
   - Open critical/high regressions must be at or below configured maximums.
   - Required suite IDs/statuses must be present and valid.
+  - Execution evidence must contain observed output, not the report itself, a policy document, or an input fixture.
+  - Each execution hash must match the current inputs. Its fixture IDs must cover all required fixtures for that suite.
+  - Counts must be non-negative integers. Summary totals must equal suite totals, and passing suites must have no failed cases.
   - Evidence paths must stay inside the repository and must not contain unresolved placeholders outside template mode.
+
+## Record A Run
+
+1. Run `npm run eval:refresh` to calculate the current input hash.
+2. Run each required suite against the configured model, runtime, and tools, or perform the documented manual evaluation.
+3. Save observed output in a repository-local evidence file. For manual evaluations, include the reviewer, observations, and automation follow-up.
+4. Record the runner, execution timestamp, input hash, covered fixture IDs, and evidence path in each suite's `execution` object.
+5. Update the counts and report timestamp from the completed run. Set `status` to `pass` only for a successful run.
+6. Run `npm run eval:verify`.
+
+The verifier checks evidence structure, scope, and input freshness. It cannot prove that a transcript is genuine or judge its meaning.
+The operator remains responsible for accurate observations and outcome assessment. A model, runtime, prompt, or tool change requires another run.
+CI fixtures can define harness-only suites. Passing those suites does not prove agent behavior or satisfy the default safety suites.

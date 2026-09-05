@@ -1,12 +1,12 @@
 #!/usr/bin/env node
+import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { runFixtureEvals } from './run-fixture-evals.mjs';
 
 const rootDir = process.cwd();
-const templateDir = path.join(rootDir, 'template');
-const placeholderPattern = /\{\{([A-Z0-9_]+)\}\}/g;
 
 function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
@@ -14,20 +14,6 @@ function todayIsoDate() {
 
 function toPosix(value) {
   return String(value).replaceAll(path.sep, '/');
-}
-
-async function collectFiles(baseDir) {
-  const entries = await fs.readdir(baseDir, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries) {
-    const fullPath = path.join(baseDir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...await collectFiles(fullPath));
-    } else if (entry.isFile()) {
-      files.push(fullPath);
-    }
-  }
-  return files;
 }
 
 function replacementForToken(token) {
@@ -108,31 +94,32 @@ function replacementForToken(token) {
   return token.toLowerCase().replaceAll('_', '-');
 }
 
-async function replaceTemplatePlaceholders(repoDir) {
-  const files = await collectFiles(repoDir);
-  for (const filePath of files) {
-    if (path.basename(filePath) === 'PLACEHOLDERS.md') {
-      continue;
-    }
-    let raw;
-    try {
-      raw = await fs.readFile(filePath, 'utf8');
-    } catch {
-      continue;
-    }
-    if (!raw.includes('{{')) {
-      continue;
-    }
-    await fs.writeFile(
-      filePath,
-      raw.replaceAll(placeholderPattern, (_, token) => replacementForToken(token)),
-      'utf8'
-    );
-  }
+function runBlueprint(script, args) {
+  const result = spawnSync(process.execPath, [path.join(rootDir, 'scripts', script), ...args, '--json', 'true'], {
+    cwd: rootDir, encoding: 'utf8'
+  });
+  if (result.error) throw result.error;
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return JSON.parse(result.stdout);
+}
+
+async function configureBlueprint(repoDir) {
+  const questionnaire = JSON.parse(await fs.readFile(path.join(rootDir, 'distribution/bootstrap-questionnaire.json'), 'utf8'));
+  const tokens = questionnaire.sections.flatMap((section) => section.questions.flatMap((question) => question.placeholders));
+  const decisionsPath = path.join(repoDir, 'bootstrap-decisions.json');
+  await fs.writeFile(decisionsPath, JSON.stringify({
+    schemaVersion: 1,
+    values: Object.fromEntries(tokens.map((token) => [token, replacementForToken(token)]))
+  }));
+  const result = runBlueprint('bootstrap-configure.mjs', ['--target', repoDir, '--decisions', decisionsPath]);
+  assert.deepEqual(result.scriptConflicts, []);
+  const pkg = JSON.parse(await fs.readFile(path.join(repoDir, 'package.json'), 'utf8'));
+  const fragment = JSON.parse(await fs.readFile(path.join(repoDir, 'package.scripts.fragment.json'), 'utf8'));
+  for (const [name, command] of Object.entries(fragment.scripts)) assert.equal(pkg.scripts[name], command);
+  return pkg;
 }
 
 async function writePackageJson(repoDir) {
-  const fragment = JSON.parse(await fs.readFile(path.join(repoDir, 'package.scripts.fragment.json'), 'utf8'));
   const payload = {
     name: 'reading-list-golden',
     private: true,
@@ -143,7 +130,6 @@ async function writePackageJson(repoDir) {
     },
     tags: ['scope:reading-list'],
     scripts: {
-      ...fragment.scripts,
       'app:lint': 'node --check src/reading-list.js',
       'app:contract': 'node ./scripts/app-contract-check.mjs',
       'app:test': 'node --test test/reading-list.test.mjs',
@@ -281,6 +267,7 @@ async function writeProjectGates(repoDir) {
 async function writeAppFiles(repoDir) {
   await fs.mkdir(path.join(repoDir, 'src'), { recursive: true });
   await fs.mkdir(path.join(repoDir, 'test'), { recursive: true });
+  await fs.mkdir(path.join(repoDir, 'scripts'), { recursive: true });
 
   await fs.writeFile(
     path.join(repoDir, 'src', 'reading-list.js'),
@@ -547,7 +534,7 @@ async function writeProductDocs(repoDir) {
   await fs.writeFile(path.join(repoDir, 'docs', 'product-specs', 'CURRENT-STATE.md'), `${currentState}\n`, 'utf8');
 }
 
-async function writePlanEvidence(repoDir) {
+async function writePlanEvidence(repoDir, releaseBase) {
   const today = todayIsoDate();
   const completedPlan = [
     '# Reading List Core',
@@ -595,7 +582,7 @@ async function writePlanEvidence(repoDir) {
     '',
     '- `npm run verify:fast`: passes and runs app lint, contract, and unit-test gates.',
     '- `npm run verify:full`: passes and runs app build, integration, and security gates.',
-    '- `npm run release:verify -- --base v2026.05.11.1`: passes on `release/2026.05.12.1`.',
+    `- \`npm run release:verify -- --base ${releaseBase}\`: passes on \`release/2026.05.12.1\`.`,
     '',
     '## Closure',
     '',
@@ -614,7 +601,7 @@ async function writePlanEvidence(repoDir) {
     '- `npm run verify:fast` passed with app lint, contract, and unit tests.',
     '- `npm run verify:full` passed with build, integration, and security gates.',
     '- `npm run quality:score` returned score 100 with no warnings in the golden adopted repo.',
-    '- `npm run release:verify -- --base v2026.05.11.1` passed for the release slice.',
+    `- \`npm run release:verify -- --base ${releaseBase}\` passed for the release slice.`,
     '',
     '## Residual Risk',
     '',
@@ -679,7 +666,14 @@ function runGit(repoDir, args) {
   const result = spawnSync('git', args, {
     cwd: repoDir,
     encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe']
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: 'Golden Adopted Repo',
+      GIT_AUTHOR_EMAIL: 'golden-adopted-repo@example.com',
+      GIT_COMMITTER_NAME: 'Golden Adopted Repo',
+      GIT_COMMITTER_EMAIL: 'golden-adopted-repo@example.com'
+    }
   });
   if (result.error) {
     throw result.error;
@@ -691,13 +685,10 @@ function runGit(repoDir, args) {
 }
 
 function initializeReleaseHistory(repoDir) {
-  runGit(repoDir, ['init', '-b', 'main']);
-  runGit(repoDir, ['config', 'user.email', 'golden-adopted-repo@example.com']);
-  runGit(repoDir, ['config', 'user.name', 'Golden Adopted Repo']);
+  runGit(repoDir, ['init', '-b', 'release/2026.05.12.1']);
   runGit(repoDir, ['add', '.']);
   runGit(repoDir, ['commit', '-m', 'chore: adopt blueprint baseline']);
-  runGit(repoDir, ['tag', 'v2026.05.11.1']);
-  runGit(repoDir, ['checkout', '-b', 'release/2026.05.12.1']);
+  return runGit(repoDir, ['rev-parse', 'HEAD']);
 }
 
 function commitReleaseSlice(repoDir) {
@@ -730,15 +721,37 @@ function runCommand(repoDir, command, extraEnv = {}) {
 async function main() {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'golden-adopted-repo-'));
   const repoDir = path.join(tempRoot, 'repo');
-  await fs.cp(templateDir, repoDir, { recursive: true });
-  await replaceTemplatePlaceholders(repoDir);
-  initializeReleaseHistory(repoDir);
-  await writeAppFiles(repoDir);
+  const newRepoDir = path.join(tempRoot, 'new-repo');
+  runBlueprint('harness-sync.mjs', ['install', '--target', newRepoDir]);
+  await configureBlueprint(newRepoDir);
+  const newLock = JSON.parse(await fs.readFile(path.join(newRepoDir, 'package-lock.json'), 'utf8'));
+  assert.equal(newLock.lockfileVersion, 3);
+  const unrun = spawnSync(process.execPath, ['scripts/agent-hardening/check-evals.mjs'], { cwd: newRepoDir, encoding: 'utf8' });
+  assert.equal(unrun.status, 1);
+  assert.match(unrun.stderr, /not a completed passing run/);
+
+  await fs.mkdir(repoDir, { recursive: true });
   await writePackageJson(repoDir);
+  await fs.mkdir(path.join(repoDir, 'src'), { recursive: true });
+  const existingSource = 'export const existingProjectFile = true;\n';
+  await fs.writeFile(path.join(repoDir, 'src/existing.js'), existingSource);
+  const originalPackage = JSON.parse(await fs.readFile(path.join(repoDir, 'package.json'), 'utf8'));
+  await fs.writeFile(path.join(repoDir, 'package-lock.json'), JSON.stringify({
+    name: originalPackage.name, version: originalPackage.version, lockfileVersion: 3,
+    packages: { '': { name: originalPackage.name, version: originalPackage.version } }
+  }));
+  runBlueprint('harness-sync.mjs', ['adopt', '--target', repoDir]);
+  assert.deepEqual(JSON.parse(await fs.readFile(path.join(repoDir, 'package.json'), 'utf8')), originalPackage);
+  const configured = await configureBlueprint(repoDir);
+  for (const [name, command] of Object.entries(originalPackage.scripts)) assert.equal(configured.scripts[name], command);
+  assert.equal(await fs.readFile(path.join(repoDir, 'src/existing.js'), 'utf8'), existingSource);
+  const releaseBase = initializeReleaseHistory(repoDir);
+  await writeAppFiles(repoDir);
   await writeArchitectureFiles(repoDir);
   await writeProjectGates(repoDir);
   await writeProductDocs(repoDir);
-  await writePlanEvidence(repoDir);
+  await writePlanEvidence(repoDir, releaseBase);
+  await runFixtureEvals(repoDir);
   runCommand(repoDir, 'npm run eval:refresh', { CI: '1' });
   runCommand(repoDir, 'npm run bootstrap:cleanup', { CI: '1' });
   commitReleaseSlice(repoDir);
@@ -751,8 +764,8 @@ async function main() {
     'npm run plans:verify -- --scope all',
     'npm run verify:fast',
     'npm run verify:full',
-    'npm run release:verify -- --base v2026.05.11.1',
-    'npm run release:notes -- --base v2026.05.11.1'
+    `npm run release:verify -- --base ${releaseBase}`,
+    `npm run release:notes -- --base ${releaseBase}`
   ];
 
   for (const command of commands) {

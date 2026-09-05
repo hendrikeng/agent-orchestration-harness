@@ -85,6 +85,9 @@ Use `docs/MANIFEST.md` for the complete first-class documentation inventory.
 - Full merge profile: `npm run verify:full`
 - Harness alignment: `npm run harness:verify`
 
+Eval reports start as `not-run`. Before bootstrap verification, run the required evaluations and record evidence as described in `docs/agent-hardening/EVALS.md`.
+`npm run eval:refresh` does not run evaluations. Changed inputs invalidate previous results.
+
 Adopted projects must wire stack-specific lint, typecheck, test, build, database, browser, deployment, and security checks through `docs/governance/project-gates.json`. A missing gate must be marked `deferred` or `not-applicable` with a concrete rationale; silent missing testing is not allowed.
 
 ## Change Discipline

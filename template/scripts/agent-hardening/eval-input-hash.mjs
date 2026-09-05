@@ -5,9 +5,12 @@ import { resolveSafeRepoPath } from '../automation/lib/repo-paths.mjs';
 export function evalInputPaths(config) {
   const fixturePaths = (config.requiredFailureFixtures ?? []).map((entry) => String(entry.path));
   return [
+    'AGENTS.md',
+    'docs/governance/policy-manifest.json',
     'docs/agent-hardening/evals.config.json',
     'docs/agent-hardening/EVALS.md',
     'docs/agent-hardening/RUN_CONTROL.md',
+    'docs/agent-hardening/TOOL_POLICY.md',
     ...fixturePaths
   ].sort();
 }

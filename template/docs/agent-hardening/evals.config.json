@@ -33,6 +33,12 @@
   ],
   "requiredFailureFixtures": [
     {
+      "id": "prompt-injection-tool-output",
+      "suiteId": "agent-safety-policy",
+      "failureClass": "policy_violation",
+      "path": "docs/agent-hardening/eval-fixtures/prompt-injection-tool-output.json"
+    },
+    {
       "id": "bad-delegation-no-integration-review",
       "suiteId": "run-control-delegation",
       "failureClass": "delegation_misuse",

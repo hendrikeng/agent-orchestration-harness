@@ -30,3 +30,7 @@ jobs:
 
       - name: Template Consumer Smoke
         run: npm run test:template-smoke
+
+      - name: Golden Adoption Workflow
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '24.x'
+        run: npm run test:golden-adopted-repo

@@ -10,6 +10,16 @@ const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
 const reportPath = resolveSafeRepoPath(rootDir, config.reportPath, 'Eval report path');
 const report = JSON.parse(await fs.readFile(reportPath.abs, 'utf8'));
 const inputPaths = evalInputPaths(config);
-report.inputSha256 = await computeEvalInputSha256(rootDir, config);
+const inputSha256 = await computeEvalInputSha256(rootDir, config);
+if (report.inputSha256 !== inputSha256) {
+  report.status = 'not-run';
+  report.summary = { total: 0, passed: 0, failed: 0, passRate: 0 };
+  report.suites = (config.requiredSuites ?? []).map((suite) => ({
+    id: typeof suite === 'string' ? suite : suite.id,
+    status: 'not-run', total: 0, passed: 0, failed: 0
+  }));
+  report.evidence = [];
+}
+report.inputSha256 = inputSha256;
 await fs.writeFile(reportPath.abs, `${JSON.stringify(report, null, 2)}\n`);
-console.log(`[eval-refresh] wrote ${config.reportPath} from ${inputPaths.length} content-addressed input(s).`);
+console.log(`[eval-refresh] wrote ${config.reportPath} from ${inputPaths.length} content-addressed input(s). No evaluations were run; changed inputs invalidate previous results.`);

@@ -2,7 +2,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { resolveSafeRepoPath } from '../automation/lib/repo-paths.mjs';
-import { computeEvalInputSha256 } from './eval-input-hash.mjs';
+import { computeEvalInputSha256, evalInputPaths } from './eval-input-hash.mjs';
 
 const rootDir = process.cwd();
 const configPath = path.join(rootDir, 'docs', 'agent-hardening', 'evals.config.json');
@@ -231,6 +231,10 @@ async function main() {
     fail('Eval report must be a JSON object.');
   }
 
+  if (!templateMode && report.status !== 'pass') {
+    fail('Eval report is not a completed passing run. Run the required suites and record execution evidence; eval:refresh does not run evaluations.');
+  }
+
   const generatedAtRaw = report.generatedAtUtc;
   if (typeof generatedAtRaw !== 'string' || generatedAtRaw.trim().length === 0) {
     fail("Report field 'generatedAtUtc' is required.");
@@ -252,7 +256,7 @@ async function main() {
   if (freshnessMode === 'content-addressed') {
     const expectedInputSha256 = await computeEvalInputSha256(rootDir, config);
     if (report.inputSha256 !== expectedInputSha256) {
-      fail('Eval report inputSha256 does not match current policy and fixture inputs; run pnpm eval:refresh.');
+      fail('Eval report inputSha256 does not match current policy and fixture inputs; rerun the required suites and record evidence for the current inputs.');
     }
   } else if (freshnessMode === 'time-bound') {
     const maxAgeDays = Number(config.maxAgeDays ?? 0);
@@ -275,7 +279,7 @@ async function main() {
   const passed = Number(summary.passed);
   const failed = Number(summary.failed);
   const passRate = Number(summary.passRate);
-  if (!Number.isFinite(total) || !Number.isFinite(passed) || !Number.isFinite(failed) || !Number.isFinite(passRate)) {
+  if (!Number.isInteger(total) || !Number.isInteger(passed) || !Number.isInteger(failed) || !Number.isFinite(passRate)) {
     fail('Report summary fields total/passed/failed/passRate must be numeric.');
   }
   if (total <= 0) {
@@ -284,8 +288,8 @@ async function main() {
   if (passed < 0 || failed < 0) {
     fail('Eval report summary passed/failed values must be non-negative.');
   }
-  if (passed + failed > total) {
-    fail('Eval report summary is inconsistent: passed + failed exceeds total.');
+  if (passed + failed !== total) {
+    fail('Eval report summary is inconsistent: passed + failed must equal total.');
   }
   if (passRate < 0 || passRate > 1) {
     fail('Eval report summary.passRate must be within [0,1].');
@@ -331,6 +335,9 @@ async function main() {
     fail("Report field 'suites' must be a non-empty array.");
   }
   const suitesById = new Map();
+  const suiteCounts = { total: 0, passed: 0, failed: 0 };
+  const currentInputSha256 = await computeEvalInputSha256(rootDir, config);
+  const inputPaths = new Set(evalInputPaths(config));
   for (const suite of report.suites) {
     if (!isObject(suite)) {
       fail('Each report suite entry must be an object.');
@@ -340,8 +347,8 @@ async function main() {
     if (!id) {
       fail('Each report suite must include a non-empty id.');
     }
-    if (!status) {
-      fail(`Suite '${id}' is missing status.`);
+    if (!['pass', 'fail'].includes(status)) {
+      fail(`Suite '${id}' must record a completed pass or fail status.`);
     }
     if (suitesById.has(id)) {
       fail(`Duplicate suite id in report: '${id}'.`);
@@ -350,16 +357,58 @@ async function main() {
     const suiteTotal = Number(suite.total ?? 0);
     const suitePassed = Number(suite.passed ?? 0);
     const suiteFailed = Number(suite.failed ?? 0);
-    if (!Number.isFinite(suiteTotal) || suiteTotal < 0) {
+    if (!Number.isInteger(suiteTotal) || suiteTotal <= 0) {
       fail(`Suite '${id}' has invalid total value.`);
     }
-    if (!Number.isFinite(suitePassed) || suitePassed < 0 || !Number.isFinite(suiteFailed) || suiteFailed < 0) {
+    if (!Number.isInteger(suitePassed) || suitePassed < 0 || !Number.isInteger(suiteFailed) || suiteFailed < 0) {
       fail(`Suite '${id}' has invalid passed/failed values.`);
     }
-    if (suitePassed + suiteFailed > suiteTotal) {
-      fail(`Suite '${id}' is inconsistent: passed + failed exceeds total.`);
+    if (suitePassed + suiteFailed !== suiteTotal || (status === 'pass') !== (suiteFailed === 0)) {
+      fail(`Suite '${id}' counts do not match its status or total.`);
     }
+    const execution = suite.execution;
+    if (!isObject(execution) || typeof execution.runner !== 'string' || !execution.runner.trim()) {
+      fail(`Suite '${id}' needs execution evidence with a named runner or manual reviewer.`);
+    }
+    assertNoPlaceholder(execution, `suites.${id}.execution`);
+    const executedAt = toIsoDate(execution.executedAtUtc);
+    if (!executedAt || executedAt > generatedAt || executedAt > new Date()) {
+      fail(`Suite '${id}' has an invalid execution timestamp.`);
+    }
+    if (execution.inputSha256 !== currentInputSha256) {
+      fail(`Suite '${id}' execution evidence is stale; rerun it against current inputs.`);
+    }
+    const requiredFixtures = (config.requiredFailureFixtures ?? []).filter((fixture) => fixture.suiteId === id);
+    if (!Array.isArray(execution.fixtureIds) || requiredFixtures.some((fixture) => !execution.fixtureIds.includes(fixture.id))) {
+      fail(`Suite '${id}' execution evidence must cover its required failure fixtures.`);
+    }
+    if (typeof execution.evidence !== 'string' || path.isAbsolute(execution.evidence)) {
+      fail(`Suite '${id}' needs a relative execution evidence path; absolute paths can escape repository root.`);
+    }
+    const evidence = resolveSafeRepoPath(rootDir, execution.evidence, 'Execution evidence path');
+    const evidenceReal = await fs.realpath(evidence.abs);
+    const realRoot = await fs.realpath(rootDir);
+    const relativeReal = path.relative(realRoot, evidenceReal);
+    if (relativeReal === '..' || relativeReal.startsWith(`..${path.sep}`) || path.isAbsolute(relativeReal)) {
+      fail(`Suite '${id}' execution evidence escapes repository root.`);
+    }
+    const forbiddenPaths = [reportRel, ...inputPaths];
+    for (const forbidden of forbiddenPaths) {
+      if (evidenceReal === await fs.realpath(path.resolve(rootDir, forbidden))) {
+        fail(`Suite '${id}' needs execution output, not its report, policy, or input fixture.`);
+      }
+    }
+    if (!(await fs.readFile(evidenceReal, 'utf8')).trim()) {
+      fail(`Suite '${id}' execution evidence is empty.`);
+    }
+    suiteCounts.total += suiteTotal;
+    suiteCounts.passed += suitePassed;
+    suiteCounts.failed += suiteFailed;
     suitesById.set(id, { id, status });
+  }
+
+  if (suiteCounts.total !== total || suiteCounts.passed !== passed || suiteCounts.failed !== failed) {
+    fail('Eval report summary must equal the suite totals.');
   }
 
   const requiredSuites = Array.isArray(config.requiredSuites) ? config.requiredSuites : [];

@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { validatePrContract } from '../../template/scripts/automation/pr-contract-lib.mjs';
+import { runFixtureEvals } from './run-fixture-evals.mjs';
 
 const rootDir = process.cwd();
 const templateDir = path.join(rootDir, 'template');
@@ -236,6 +237,7 @@ async function main() {
   await replaceTemplatePlaceholders(repoDir);
   await writePackageJson(repoDir);
   await assertPullRequestTemplatesMatchVerifier(repoDir);
+  await runFixtureEvals(repoDir);
 
   const commands = [
     'npm run harness:verify',

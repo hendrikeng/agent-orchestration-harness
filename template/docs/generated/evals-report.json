@@ -1,13 +1,13 @@
 {
   "generatedAtUtc": "{{GENERATED_AT_UTC_ISO}}",
-  "inputSha256": "37ba1d5088e01fc1b658349ff2802af682ae952a27c2deaf64ba5308abdcc427",
+  "inputSha256": "644c7068daf28572d5c4e8a505b5da6064dee3f805aac661471837862c3dd544",
   "provider": "{{EVAL_PROVIDER}}",
   "model": "{{EVAL_MODEL_ID}}",
   "summary": {
-    "total": 52,
-    "passed": 52,
+    "total": 0,
+    "passed": 0,
     "failed": 0,
-    "passRate": 1
+    "passRate": 0
   },
   "regressions": {
     "criticalOpen": 0,
@@ -16,56 +16,49 @@
   "suites": [
     {
       "id": "golden-critical-flows",
-      "status": "pass",
-      "total": 14,
-      "passed": 14,
+      "status": "not-run",
+      "total": 0,
+      "passed": 0,
       "failed": 0
     },
     {
       "id": "agent-safety-policy",
-      "status": "pass",
-      "total": 8,
-      "passed": 8,
+      "status": "not-run",
+      "total": 0,
+      "passed": 0,
       "failed": 0
     },
     {
       "id": "memory-continuity",
-      "status": "pass",
-      "total": 9,
-      "passed": 9,
+      "status": "not-run",
+      "total": 0,
+      "passed": 0,
       "failed": 0
     },
     {
       "id": "tool-risk-boundaries",
-      "status": "pass",
-      "total": 7,
-      "passed": 7,
+      "status": "not-run",
+      "total": 0,
+      "passed": 0,
       "failed": 0
     },
     {
       "id": "observability-traceability",
-      "status": "pass",
-      "total": 6,
-      "passed": 6,
+      "status": "not-run",
+      "total": 0,
+      "passed": 0,
       "failed": 0
     },
     {
       "id": "run-control-delegation",
-      "status": "pass",
-      "total": 8,
-      "passed": 8,
+      "status": "not-run",
+      "total": 0,
+      "passed": 0,
       "failed": 0
     }
   ],
   "evidence": [
-    "docs/agent-hardening/EVALS.md",
-    "docs/agent-hardening/RUN_CONTROL.md",
-    "docs/agent-hardening/eval-fixtures/bad-delegation-no-integration-review.json",
-    "docs/agent-hardening/eval-fixtures/fake-tests-final-claim.json",
-    "docs/agent-hardening/eval-fixtures/stale-context-after-resume.json",
-    "docs/agent-hardening/eval-fixtures/missed-plan-closeout.json",
-    "docs/agent-hardening/eval-fixtures/unsafe-tool-use-without-approval.json",
-    "docs/agent-hardening/eval-fixtures/runtime-orchestration-overreach.json",
     "{{EVAL_EVIDENCE_PATH_1}}"
-  ]
+  ],
+  "status": "not-run"
 }

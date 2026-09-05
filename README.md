@@ -71,7 +71,7 @@ Then work inside the target repo:
 2. Use the execution kickoff prompt to apply those decisions to the installed template.
 3. Merge `package.scripts.fragment.json` into the target `package.json`.
 4. Replace `docs/governance/project-gates.json` with real lint, typecheck, test, build, database, browser, deploy, and security gates, or mark missing gates with a concrete rationale.
-5. Run `npm run harness:verify`, `npm run context:compile`, `npm run eval:refresh`, and `npm run verify:fast`.
+5. Run `npm run harness:verify`, `npm run context:compile`, and `npm run eval:refresh`. Run the required evaluations and record their execution evidence before `npm run verify:fast`. See `docs/agent-hardening/EVALS.md`.
 6. Run `npm run bootstrap:cleanup` after placeholders are replaced and package scripts are merged; cleanup removes the bootstrap inputs, bootstrap-only scripts/tests, and the two bootstrap package commands.
 
 ## Agent Quickstart Prompts
@@ -112,7 +112,7 @@ Assume the template has already been installed into the current repository root.
 2. Merge package.scripts.fragment.json into package.json without deleting unrelated existing project scripts.
 3. Wire docs/governance/project-gates.json to real project commands for lint, typecheck, unit tests, build, and any applicable integration, migration, browser, security, release, or deploy checks.
 4. Run ./scripts/check-template-placeholders.sh until no unresolved placeholders remain outside the documented inventory.
-5. Run npm run harness:verify, npm run context:compile, npm run eval:refresh, npm run docs:verify, npm run plans:verify, npm run project:gates:verify, and npm run verify:fast.
+5. Run npm run harness:verify, npm run context:compile, and npm run eval:refresh. Run the required evaluations and record execution evidence under docs/agent-hardening/EVALS.md before running npm run docs:verify, npm run plans:verify, npm run project:gates:verify, and npm run verify:fast. Refresh alone never grants an eval pass.
 6. Create or update exactly one executable future or active slice from the approved first-slice plan.
 7. Implement only that slice if execution approval includes implementation; otherwise stop after verified bootstrap and slice creation.
 8. Update current-state docs, architecture/standards docs, validation evidence, and completed-plan closeout where the executed change requires it.
@@ -126,4 +126,8 @@ Keep the work agent-portable: any capable coding agent must be able to resume fr
 
 - `npm run test:root`
 - `npm run test:template-smoke`
+- `npm run test:golden-adopted-repo`
 - `npm test`
+
+CI runs the golden adoption workflow once on Linux with Node.js 24.x. It uses the public install, adopt, and configure commands.
+The smoke and golden fixtures record real harness-test output under fixture-specific eval configs. They do not claim that agent evaluations passed.
