@@ -7,6 +7,15 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
+import { decisions } from './bootstrap-test-helpers.mjs';
+
+async function configure(targetDir) {
+  const packetPath = path.join(targetDir, 'decisions.json');
+  await fs.writeFile(packetPath, JSON.stringify(await decisions()));
+  const result = spawnSync(process.execPath, [path.join(repoRoot, 'scripts/bootstrap-configure.mjs'), '--target', targetDir, '--decisions', packetPath]);
+  assert.equal(result.status, 0, String(result.stderr));
+}
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const scriptPath = path.join(repoRoot, 'scripts', 'harness-sync.mjs');
 const bootstrapOnlyPaths = [
@@ -214,11 +223,12 @@ test('harness-sync drift reports modified managed files', async () => {
   assert.equal(payload.modified.includes('README.md'), true);
 });
 
-test('harness-sync update requires explicit approval to overwrite modified managed files', async () => {
+test('harness-sync update never force-overwrites modified managed files', async () => {
   const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-update-'));
   const callerDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-caller-'));
 
   assert.equal(run(['install', '--target', targetDir], callerDir).status, 0);
+  await configure(targetDir);
   await fs.writeFile(path.join(targetDir, 'README.md'), '# Drifted\n', 'utf8');
 
   const refused = run(['update', '--target', targetDir], callerDir);
@@ -227,17 +237,15 @@ test('harness-sync update requires explicit approval to overwrite modified manag
   assert.equal(await fs.readFile(path.join(targetDir, 'README.md'), 'utf8'), '# Drifted\n');
 
   const result = run(['update', '--target', targetDir, '--overwrite-modified', 'true'], callerDir);
-  assert.equal(result.status, 0);
-
-  const readme = await fs.readFile(path.join(targetDir, 'README.md'), 'utf8');
-  assert.match(readme, /## Product Scope/);
-  assert.match(readme, /## Enforcement and Quality Gates/);
-  assert.doesNotMatch(readme, /Agent Kickoff Prompts/);
+  assert.equal(result.status, 1);
+  assert.match(String(result.stderr), /MODIFIED_MANAGED_FILES.*README.md/);
+  assert.equal(await fs.readFile(path.join(targetDir, 'README.md'), 'utf8'), '# Drifted\n');
 });
 
-test('harness-sync update accepts files that already match the incoming source', async () => {
+test('harness-sync update compares configured hashes rather than raw source hashes', async () => {
   const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-incoming-exact-'));
   assert.equal(run(['install', '--target', targetDir]).status, 0);
+  await configure(targetDir);
   const manifestPath = path.join(targetDir, 'docs', 'ops', 'automation', 'harness-manifest.json');
   const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
   const readme = manifest.managedFiles.find((entry) => entry.targetPath === 'README.md');
@@ -251,6 +259,7 @@ test('harness-sync update accepts files that already match the incoming source',
 test('harness-sync update refuses collisions at newly managed paths', async () => {
   const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-new-managed-'));
   assert.equal(run(['install', '--target', targetDir]).status, 0);
+  await configure(targetDir);
   const targetPath = '.github/PULL_REQUEST_TEMPLATE/fix.md';
   const manifestPath = path.join(targetDir, 'docs', 'ops', 'automation', 'harness-manifest.json');
   const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
@@ -323,6 +332,7 @@ test('harness-sync drift reports unexpected managed files from the downstream ma
 test('harness-sync update removes managed files no longer present in the source manifest', async () => {
   const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-removed-'));
   assert.equal(run(['install', '--target', targetDir]).status, 0);
+  await configure(targetDir);
 
   const removedPath = path.join(targetDir, 'docs', 'obsolete-managed-file.txt');
   await fs.mkdir(path.dirname(removedPath), { recursive: true });
@@ -334,9 +344,17 @@ test('harness-sync update removes managed files no longer present in the source 
     targetPath: 'docs/obsolete-managed-file.txt',
     sourcePath: 'template/docs/obsolete-managed-file.txt',
     sha256: createHash('sha256').update('stale\n').digest('hex'),
+    configuredSha256: createHash('sha256').update('stale\n').digest('hex'),
     size: 6
   });
   await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+
+  await fs.writeFile(removedPath, 'local edit\n');
+  const conflict = run(['update', '--target', targetDir]);
+  assert.equal(conflict.status, 1);
+  assert.match(String(conflict.stderr), /MODIFIED_MANAGED_FILES.*obsolete-managed-file/);
+  assert.equal(await fs.readFile(removedPath, 'utf8'), 'local edit\n');
+  await fs.rm(removedPath);
 
   const result = run(['update', '--target', targetDir, '--json', 'true']);
   assert.equal(result.status, 0);
@@ -345,6 +363,118 @@ test('harness-sync update removes managed files no longer present in the source 
   assert.equal(payload.filesRemoved, 1);
   await assert.rejects(fs.access(removedPath));
   assert.equal(run(['drift', '--target', targetDir]).status, 0);
+});
+
+test('configured adoption updates incoming templates and fails safely before configuration mutation', async (t) => {
+  const fixture = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-configured-'));
+  t.after(() => fs.rm(fixture, { recursive: true, force: true }));
+  const blueprint = path.join(fixture, 'blueprint');
+  const target = path.join(fixture, 'target');
+  for (const directory of ['scripts', 'distribution', 'template']) {
+    await fs.cp(path.join(repoRoot, directory), path.join(blueprint, directory), { recursive: true });
+  }
+  await fs.mkdir(target);
+  await fs.writeFile(path.join(target, 'package.json'), '{"name":"existing"}\n');
+  await fs.writeFile(path.join(target, 'package-lock.json'), '{"lockfileVersion":3}\n');
+  const execute = (script, args) => spawnSync(process.execPath, [path.join(blueprint, 'scripts', script), ...args], { encoding: 'utf8', cwd: fixture });
+  const sync = (...args) => execute('harness-sync.mjs', [...args, '--target', target]);
+  assert.equal(sync('adopt').status, 0);
+  const packetPath = path.join(target, 'decisions.json');
+  const packet = await decisions();
+  await fs.writeFile(packetPath, JSON.stringify(packet));
+  const configured = execute('bootstrap-configure.mjs', ['--target', target, '--decisions', packetPath]);
+  assert.equal(configured.status, 0, configured.stderr);
+  const manifestPath = path.join(target, 'docs/ops/automation/harness-manifest.json');
+  const before = await fs.readFile(manifestPath, 'utf8');
+  const sourceReadme = path.join(blueprint, 'template/README.md');
+  await fs.appendFile(sourceReadme, '\nIncoming for {{PRODUCT}}\n');
+  assert.equal(sync('drift').status, 2);
+  // A manually reconciled file that already equals incoming configured content is safe.
+  await fs.appendFile(path.join(target, 'README.md'), '\nIncoming for Configured Project\n');
+  const updated = sync('update');
+  assert.equal(updated.status, 0, updated.stderr);
+  assert.match(await fs.readFile(path.join(target, 'README.md'), 'utf8'), /Incoming for Configured Project/);
+  const after = await fs.readFile(manifestPath, 'utf8');
+  assert.notEqual(after, before);
+  const entry = JSON.parse(after).managedFiles.find((item) => item.targetPath === 'README.md');
+  assert.notEqual(entry.sha256, entry.configuredSha256);
+  assert.equal(entry.configuredSha256, createHash('sha256').update(await fs.readFile(path.join(target, 'README.md'))).digest('hex'));
+  assert.equal(sync('drift').status, 0);
+  // Bootstrap helpers may already have been cleaned up in an established project.
+  for (const relative of bootstrapOnlyPaths) await fs.rm(path.join(target, relative));
+  assert.equal(sync('update').status, 0);
+
+  const snapshot = async () => {
+    const files = await fs.readdir(target, { recursive: true });
+    return Object.fromEntries(await Promise.all(files.filter((file) => !file.endsWith('/')).map(async (file) => {
+      const absolute = path.join(target, file);
+      return [file, (await fs.stat(absolute)).isFile() ? (await fs.readFile(absolute)).toString('base64') : null];
+    })));
+  };
+  await fs.appendFile(sourceReadme, '\n{{NEW_REQUIRED_DECISION}}\n');
+  const unchanged = await snapshot();
+  const missing = sync('update');
+  assert.equal(missing.status, 1);
+  assert.match(missing.stderr, /Missing placeholder decision.*NEW_REQUIRED_DECISION/);
+  assert.deepEqual(await snapshot(), unchanged);
+  const questionnairePath = path.join(blueprint, 'distribution/bootstrap-questionnaire.json');
+  const questionnaire = JSON.parse(await fs.readFile(questionnairePath, 'utf8'));
+  questionnaire.sections[0].questions[0].placeholders.push('NEW_REQUIRED_DECISION');
+  await fs.writeFile(questionnairePath, JSON.stringify(questionnaire));
+  assert.match(sync('update').stderr, /Missing placeholder decision.*NEW_REQUIRED_DECISION/);
+  assert.deepEqual(await snapshot(), unchanged);
+  packet.values.NEW_REQUIRED_DECISION = 'Approved new value';
+  await fs.writeFile(packetPath, JSON.stringify(packet));
+  assert.equal(sync('update').status, 0);
+  assert.match(await fs.readFile(path.join(target, 'README.md'), 'utf8'), /Approved new value/);
+
+  // A later render failure must not advance either source or configured baselines.
+  await fs.writeFile(path.join(blueprint, 'template/docs/governance/project-gates.json'), '{ {{PRODUCT}}');
+  const preFailure = await snapshot();
+  assert.equal(sync('update').status, 1);
+  assert.deepEqual(await snapshot(), preFailure);
+});
+
+test('legacy manifests require explicit baseline migration', async () => {
+  const target = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-legacy-'));
+  assert.equal(run(['install', '--target', target]).status, 0);
+  await configure(target);
+  const manifestPath = path.join(target, 'docs/ops/automation/harness-manifest.json');
+  const legacyManifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  delete legacyManifest.decisionsPath;
+  for (const entry of legacyManifest.managedFiles) {
+    delete entry.configuredSha256;
+    delete entry.preservedLocal;
+  }
+  await fs.writeFile(manifestPath, `${JSON.stringify(legacyManifest, null, 2)}\n`);
+  const before = await fs.readFile(manifestPath, 'utf8');
+  const result = run(['update', '--target', target, '--overwrite-modified', 'true']);
+  assert.equal(result.status, 1);
+  assert.match(String(result.stderr), /CONFIGURED_BASELINE_MISSING.*installed blueprint revision.*bootstrap-configure.*--baseline-only true/);
+  assert.equal(await fs.readFile(manifestPath, 'utf8'), before);
+
+  for (const relative of bootstrapOnlyPaths) await fs.rm(path.join(target, relative), { force: true });
+  const packetPath = path.join(target, 'decisions.json');
+  await fs.writeFile(packetPath, JSON.stringify(await decisions()));
+  const migrated = spawnSync(process.execPath, [
+    path.join(repoRoot, 'scripts/bootstrap-configure.mjs'), '--target', target,
+    '--decisions', packetPath, '--baseline-only', 'true'
+  ], { encoding: 'utf8' });
+  assert.equal(migrated.status, 0, migrated.stderr);
+  assert.equal(run(['update', '--target', target]).status, 0);
+});
+
+test('adoption preserves genuine edits even after configuration records a baseline', async () => {
+  const target = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-preserved-baseline-'));
+  await fs.writeFile(path.join(target, 'README.md'), '# Existing project\n');
+  await fs.writeFile(path.join(target, 'package.json'), '{"name":"existing"}\n');
+  await fs.writeFile(path.join(target, 'package-lock.json'), '{"lockfileVersion":3}\n');
+  assert.equal(run(['adopt', '--target', target]).status, 0);
+  await configure(target);
+  const result = run(['update', '--target', target]);
+  assert.equal(result.status, 1);
+  assert.match(String(result.stderr), /MODIFIED_MANAGED_FILES.*README.md/);
+  assert.equal(await fs.readFile(path.join(target, 'README.md'), 'utf8'), '# Existing project\n');
 });
 
 test('harness-sync refuses to install over the blueprint repository root', async () => {

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { collectSourceFiles } from './harness-sync.mjs';
+import { collectSourceFiles, writeTextFileAtomic } from './harness-sync.mjs';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const questionnairePath = path.join(rootDir, 'distribution', 'bootstrap-questionnaire.json');
@@ -15,7 +15,7 @@ function parseArgs(argv) {
   const options = {};
   for (let index = 0; index < argv.length; index += 2) {
     const key = argv[index];
-    if (!key?.startsWith('--') || argv[index + 1] === undefined) throw new Error('Usage: node scripts/bootstrap-configure.mjs --target <path> --decisions <path> [--json true|false]');
+    if (!key?.startsWith('--') || argv[index + 1] === undefined) throw new Error('Usage: node scripts/bootstrap-configure.mjs --target <path> --decisions <path> [--json true|false] [--baseline-only true|false]');
     options[key.slice(2)] = argv[index + 1];
   }
   if (!options.target || !options.decisions) throw new Error('Both --target and --decisions are required.');
@@ -130,6 +130,32 @@ function replaceJsonStrings(value, values) {
   return value;
 }
 
+export function configureContent(relativePath, source, values) {
+  if (path.basename(relativePath) === 'PLACEHOLDERS.md' || ['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.sh'].includes(path.extname(relativePath)) || source.includes(0) || !source.includes(Buffer.from('{{'))) return source;
+  const content = source.toString('utf8');
+  const missing = [...content.matchAll(/\{\{([A-Z0-9_]+)\}\}/g)].map((match) => match[1]).filter((key) => !Object.hasOwn(values, key));
+  if (missing.length) throw new Error(`Missing placeholder decision(s) in ${relativePath}: ${[...new Set(missing)].join(', ')}`);
+  return Buffer.from(path.extname(relativePath) === '.json'
+    ? `${JSON.stringify(replaceJsonStrings(JSON.parse(content), values), null, 2)}\n`
+    : replaceText(content, values));
+}
+
+export async function loadDecisions(targetDir, decisionFile) {
+  const decisionsPath = path.resolve(targetDir, decisionFile);
+  if (!isWithin(targetDir, decisionsPath)) throw new Error('Decision packet must be inside the target repository.');
+  await assertNoSymlink(targetDir, decisionsPath);
+  const questionnaire = JSON.parse(await fs.readFile(questionnairePath, 'utf8'));
+  const decisions = JSON.parse(await fs.readFile(decisionsPath, 'utf8'));
+  if (decisions.schemaVersion !== 1) throw new Error(`Unsupported decision packet schemaVersion: ${decisions.schemaVersion ?? 'missing'}.`);
+  const expected = validateValues(questionnaire, decisions.values);
+  if (decisions.evidence && (typeof decisions.evidence !== 'object' || Array.isArray(decisions.evidence))) throw new Error('Decision evidence must be an object.');
+  const invalidEvidence = Object.entries(decisions.evidence ?? {}).find(([, value]) => typeof value !== 'string');
+  if (invalidEvidence) throw new Error(`${invalidEvidence[0]} evidence must be a string.`);
+  const evidenceSecret = Object.entries(decisions.evidence ?? {}).find(([, value]) => secretPattern.test(value));
+  if (evidenceSecret) throw new Error(`${evidenceSecret[0]} evidence appears to contain a secret.`);
+  return { decisions, expected, decisionsPath };
+}
+
 async function replacePlaceholders(targetDir, values, expected) {
   const replacements = [];
   const conflicts = [];
@@ -152,10 +178,7 @@ async function replacePlaceholders(targetDir, values, expected) {
       if ([...targetContent.matchAll(/\{\{([A-Z0-9_]+)\}\}/g)].some((match) => expected.has(match[1]))) conflicts.push(relativePath);
       continue;
     }
-    const content = source.toString('utf8');
-    const next = path.extname(relativePath) === '.json'
-      ? `${JSON.stringify(replaceJsonStrings(JSON.parse(content), values), null, 2)}\n`
-      : replaceText(content, values);
+    const next = configureContent(relativePath, source, values).toString('utf8');
     const unresolved = [...next.matchAll(/\{\{([A-Z0-9_]+)\}\}/g)]
       .filter((match) => expected.has(match[1]));
     if (unresolved.length) throw new Error(`Unresolved governed placeholders remain in ${relativePath}.`);
@@ -276,24 +299,36 @@ async function main() {
     if (!targetStat.isFile()) throw new Error(`Installed harness path is not a file: ${entry.targetPath}`);
     if (sha256(source) !== entry.sha256) throw new Error(`Blueprint source does not match the installed harness for ${entry.targetPath}.`);
   }
-  const questionnaire = JSON.parse(await fs.readFile(questionnairePath, 'utf8'));
-  const decisions = JSON.parse(await fs.readFile(decisionsPath, 'utf8'));
-  if (decisions.schemaVersion !== 1) throw new Error(`Unsupported decision packet schemaVersion: ${decisions.schemaVersion ?? 'missing'}.`);
-  const expected = validateValues(questionnaire, decisions.values);
-  if (decisions.evidence && (typeof decisions.evidence !== 'object' || Array.isArray(decisions.evidence))) throw new Error('Decision evidence must be an object.');
-  const invalidEvidence = Object.entries(decisions.evidence ?? {}).find(([, value]) => typeof value !== 'string');
-  if (invalidEvidence) throw new Error(`${invalidEvidence[0]} evidence must be a string.`);
-  const evidenceSecret = Object.entries(decisions.evidence ?? {}).find(([, value]) => secretPattern.test(value));
-  if (evidenceSecret) throw new Error(`${evidenceSecret[0]} evidence appears to contain a secret.`);
-  const packageConfiguration = await packagePlan(targetDir, decisions.values);
-  const changedFiles = await replacePlaceholders(targetDir, decisions.values, expected);
-  const scriptConflicts = await mergePackageScripts(packageConfiguration);
+  const { decisions, expected } = await loadDecisions(targetDir, decisionsPath);
+  const configuredEntries = await Promise.all(manifest.managedFiles.map(async (entry) => {
+    const configured = configureContent(entry.targetPath, await fs.readFile(path.join(rootDir, entry.sourcePath)), decisions.values);
+    return { ...entry, configuredSha256: sha256(configured) };
+  }));
+  const baselineOnly = options['baseline-only'] === 'true';
+  if (baselineOnly && manifest.managedFiles.every((entry) => entry.configuredSha256)) {
+    throw new Error('The installed harness manifest already has a configured baseline.');
+  }
+  const packageConfiguration = baselineOnly ? null : await packagePlan(targetDir, decisions.values);
+  const changedFiles = baselineOnly ? [] : await replacePlaceholders(targetDir, decisions.values, expected);
+  const scriptConflicts = baselineOnly ? [] : await mergePackageScripts(packageConfiguration);
+  // Never bless preserved adoption files or later local edits as template-owned content.
+  for (const entry of configuredEntries) {
+    const actualHash = sha256(await fs.readFile(path.join(targetDir, entry.targetPath)));
+    entry.preservedLocal = actualHash !== entry.configuredSha256;
+    entry.configuredSha256 = actualHash;
+  }
+  await writeTextFileAtomic(manifestPath, `${JSON.stringify({ ...manifest,
+    decisionsPath: path.relative(targetDir, decisionsPath).replaceAll(path.sep, '/'),
+    managedFiles: configuredEntries
+  }, null, 2)}\n`);
   const payload = { target: targetDir, changedFiles, scriptConflicts };
   if (options.json === 'true') process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   else process.stdout.write(`[bootstrap-configure] changed=${changedFiles.length} scriptConflicts=${scriptConflicts.length}\n`);
 }
 
-main().catch((error) => {
-  console.error(`[bootstrap-configure] ${error instanceof Error ? error.message : String(error)}`);
-  process.exit(1);
-});
+if (await fs.realpath(process.argv[1] ?? '').catch(() => '') === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(`[bootstrap-configure] ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  });
+}

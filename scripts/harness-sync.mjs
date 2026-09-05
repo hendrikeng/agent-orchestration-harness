@@ -47,7 +47,7 @@ function asBoolean(value, fallback = false) {
 
 function usage() {
   process.stderr.write(
-    'Usage: node ./scripts/harness-sync.mjs <install|adopt|update|drift> --target <path> [--json true|false] [--overwrite-modified true|false]\n'
+    'Usage: node ./scripts/harness-sync.mjs <install|adopt|update|drift> --target <path> [--json true|false] [--decisions <path>]\n'
   );
 }
 
@@ -138,7 +138,7 @@ async function readJson(filePath) {
   return JSON.parse(raw);
 }
 
-async function writeTextFileAtomic(filePath, content, encoding = 'utf8') {
+export async function writeTextFileAtomic(filePath, content, encoding = 'utf8') {
   const directory = path.dirname(filePath);
   const tempPath = path.join(
     directory,
@@ -374,7 +374,8 @@ async function compareTarget(targetDir, sourceEntries, installedManifest = null)
     try {
       await assertTargetFileShape(targetDir, entry.targetPath);
       const targetHash = await sha256(targetPath);
-      if (targetHash !== entry.sha256) {
+      const baseline = installedManifest?.managedFiles.find((item) => item.targetPath === entry.targetPath);
+      if (baseline?.preservedLocal || targetHash !== (baseline?.configuredSha256 ?? entry.sha256) || (baseline && baseline.sha256 !== entry.sha256)) {
         modified.push(entry.targetPath);
       } else {
         exact.push(entry.targetPath);
@@ -413,7 +414,7 @@ async function governedPlaceholders(sourceEntries) {
   return [...placeholders].sort((left, right) => left.localeCompare(right));
 }
 
-async function writeDownstreamManifest(targetDir, manifest, sourceEntries) {
+async function writeDownstreamManifest(targetDir, manifest, sourceEntries, decisionsPath) {
   const manifestRel = downstreamManifestRel(manifest);
   const downstreamManifestPath = path.join(targetDir, manifestRel);
   await assertNoTargetSymlink(targetDir, manifestRel);
@@ -424,7 +425,8 @@ async function writeDownstreamManifest(targetDir, manifest, sourceEntries) {
     sourceRevision: gitHeadRevision(),
     installedAt: new Date().toISOString(),
     governedPlaceholders: await governedPlaceholders(sourceEntries),
-    managedFiles: sourceEntries
+    managedFiles: sourceEntries,
+    ...(decisionsPath ? { decisionsPath } : {})
   });
   await writeTextFileAtomic(downstreamManifestPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
@@ -458,7 +460,7 @@ async function removeRetiredManagedFiles(targetDir, sourceEntries, installedMani
     const targetPathAbs = path.join(targetDir, targetPathRel);
     assertWithinDirectory(targetDir, targetPathAbs, `retired managed file '${targetPathRel}'`);
     await assertNoTargetSymlink(targetDir, targetPathRel);
-    await fs.rm(targetPathAbs, { force: true }).catch(() => {});
+    await fs.rm(targetPathAbs, { force: true });
     await pruneEmptyDirectories(targetDir, path.dirname(targetPathAbs));
     removed.push(targetPathRel);
   }
@@ -496,16 +498,17 @@ async function locallyModifiedManagedFiles(targetDir, installedManifest, sourceE
     const targetPathRel = assertSafeRelativePath(entry.targetPath, 'installed managed targetPath');
     try {
       const currentHash = await sha256(path.join(targetDir, targetPathRel));
-      const incomingHash = incoming.get(targetPathRel)?.sha256;
-      if (currentHash !== entry.sha256 && currentHash !== incomingHash) modified.push(targetPathRel);
+      const incomingHash = incoming.get(targetPathRel)?.configuredSha256;
+      if ((entry.preservedLocal && currentHash !== incomingHash) || (currentHash !== entry.configuredSha256 && currentHash !== incomingHash)) modified.push(targetPathRel);
     } catch (error) {
       if (error?.code !== 'ENOENT') throw error;
+      if (incoming.has(targetPathRel)) modified.push(targetPathRel);
     }
   }
   for (const entry of sourceEntries) {
     if (installed.has(entry.targetPath)) continue;
     try {
-      if (await sha256(path.join(targetDir, entry.targetPath)) !== entry.sha256) modified.push(entry.targetPath);
+      if (await sha256(path.join(targetDir, entry.targetPath)) !== entry.configuredSha256) modified.push(entry.targetPath);
     } catch (error) {
       if (error?.code !== 'ENOENT') throw error;
     }
@@ -545,7 +548,7 @@ async function preflightTargetPaths(targetDir, manifest, copyEntries, managedEnt
   }
 }
 
-async function installOrUpdate(targetDir, manifest, copyEntries, managedEntries, installedManifest = null) {
+async function installOrUpdate(targetDir, manifest, copyEntries, managedEntries, installedManifest = null, configured = null) {
   const removed = await removeRetiredManagedFiles(targetDir, managedEntries, installedManifest);
   const copied = [];
   for (const entry of copyEntries) {
@@ -555,10 +558,11 @@ async function installOrUpdate(targetDir, manifest, copyEntries, managedEntries,
     assertWithinDirectory(targetDir, targetPath, `target file '${entry.targetPath}'`);
     await assertNoTargetSymlink(targetDir, entry.targetPath);
     await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    await fs.copyFile(sourcePath, targetPath);
+    if (configured) await writeTextFileAtomic(targetPath, configured.contents.get(entry.targetPath));
+    else await fs.copyFile(sourcePath, targetPath);
     copied.push(entry.targetPath);
   }
-  await writeDownstreamManifest(targetDir, manifest, managedEntries);
+  await writeDownstreamManifest(targetDir, manifest, managedEntries, configured?.decisionsPath);
   return { copied, removed };
 }
 
@@ -641,13 +645,26 @@ async function main() {
     }
   }
 
+  let configured = null;
   if (command === 'update') {
     if (!manifestValidation.ok) {
       throw new Error(`[${manifestValidation.code}] ${manifestValidation.message}`);
     }
+    if (!installedManifest.decisionsPath || installedManifest.managedFiles.some((entry) => !/^[a-f0-9]{64}$/.test(entry.configuredSha256 ?? ''))) {
+      throw new Error('[CONFIGURED_BASELINE_MISSING] Update requires a configured baseline. Back up local edits. In a checkout of the installed blueprint revision, copy the updated scripts/harness-sync.mjs and scripts/bootstrap-configure.mjs without changing templates. Run bootstrap-configure there with the approved decision packet and --baseline-only true. Reconcile preserved files, then retry update. Do not adopt again or copy raw hashes into the baseline.');
+    }
+    const { loadDecisions, configureContent } = await import('./bootstrap-configure.mjs');
+    const { decisions, decisionsPath } = await loadDecisions(targetDir, options.decisions ?? installedManifest.decisionsPath);
+    configured = { contents: new Map(), decisionsPath: toPosix(path.relative(targetDir, decisionsPath)) };
+    // Prepare and validate every incoming template before any target mutation.
+    for (const entry of managedSourceEntries) {
+      const content = configureContent(entry.targetPath, await fs.readFile(path.join(rootDir, entry.sourcePath)), decisions.values);
+      configured.contents.set(entry.targetPath, content);
+      entry.configuredSha256 = createHash('sha256').update(content).digest('hex');
+    }
     const locallyModified = await locallyModifiedManagedFiles(targetDir, installedManifest, managedSourceEntries);
-    if (locallyModified.length > 0 && !asBoolean(options['overwrite-modified'], false)) {
-      throw new Error(`[MODIFIED_MANAGED_FILES] Update refuses ${locallyModified.length} locally modified managed file(s). Review drift or pass --overwrite-modified true.`);
+    if (locallyModified.length > 0) {
+      throw new Error(`[MODIFIED_MANAGED_FILES] Update refuses locally modified managed file(s): ${locallyModified.join(', ')}. Review and reconcile these files before retrying; force overwrite is not supported.`);
     }
   }
 
@@ -659,7 +676,8 @@ async function main() {
       sourceManifest,
       copySourceEntries,
       managedSourceEntries,
-      installedManifest
+      installedManifest,
+      configured
     );
   const payload = {
     command,
@@ -679,7 +697,7 @@ async function main() {
   }
 }
 
-if (path.resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
+if (await fs.realpath(process.argv[1] ?? '').catch(() => '') === fileURLToPath(import.meta.url)) {
   main().catch((error) => {
     process.stderr.write(`[harness-sync] ${error instanceof Error ? error.message : String(error)}\n`);
     process.exit(1);

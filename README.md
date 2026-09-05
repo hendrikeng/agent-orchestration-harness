@@ -57,7 +57,28 @@ Use `adopt` for an existing Node.js project. The command copies missing files an
 node ./scripts/harness-sync.mjs adopt --target /path/to/existing-project --json true
 ```
 
-Use `drift` for a read-only comparison. An update refuses locally modified managed files unless the operator explicitly passes `--overwrite-modified true`.
+Use `drift` for a read-only comparison.
+
+Configuration keeps the source-template hash (`sha256`). It also records the configured file hash (`configuredSha256`) in the installed manifest. Updates compare local files against the configured baseline. Updates refuse genuine local edits, deleted managed files, and files that adoption preserved. The `--overwrite-modified` flag cannot bypass these conflicts.
+
+Updates reuse the approved packet at the recorded `decisionsPath`. The optional `--decisions` argument selects a different approved packet in the target repository. Missing decisions or invalid incoming templates stop the update before it changes files. The manifest advances only after configuration succeeds.
+
+```bash
+node ./scripts/harness-sync.mjs update --target /path/to/existing-project
+```
+
+Older manifests without a configured baseline stop with `CONFIGURED_BASELINE_MISSING`. To migrate:
+
+1. Back up local edits.
+2. Create a checkout of the blueprint revision recorded in the installed manifest.
+3. Copy the updated `scripts/harness-sync.mjs` and `scripts/bootstrap-configure.mjs` into that checkout.
+4. Do not change the templates in the checkout.
+5. Restore any removed bootstrap-only helpers from the installed revision.
+6. Run `bootstrap-configure.mjs` with the approved packet and `--baseline-only true`.
+7. Review files marked `preservedLocal` in the manifest.
+8. If you restore those files to their configured template content, run configuration again before another update.
+
+Do not adopt the repository again or copy source hashes into the configured baseline.
 
 The current adoption workflow requires Node.js 24 and a `package.json` with an npm, pnpm, or yarn lockfile. New-project configuration currently creates an npm `package-lock.json` or `npm-shrinkwrap.json`. Other stacks can use audit mode, but automatic adoption is not yet supported.
 

@@ -9,27 +9,7 @@ import { fileURLToPath } from 'node:url';
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const scriptPath = path.join(rootDir, 'scripts', 'bootstrap-configure.mjs');
 const harnessSyncPath = path.join(rootDir, 'scripts', 'harness-sync.mjs');
-const questionnairePath = path.join(rootDir, 'distribution', 'bootstrap-questionnaire.json');
-
-async function decisions() {
-  const questionnaire = JSON.parse(await fs.readFile(questionnairePath, 'utf8'));
-  const values = {};
-  for (const placeholder of questionnaire.sections.flatMap((section) => section.questions.flatMap((question) => question.placeholders))) {
-    values[placeholder] = placeholder.startsWith('SCORE_') ? '4' : placeholder.toLowerCase();
-  }
-  values.LAST_UPDATED_ISO_DATE = '2026-03-22';
-  values.CURRENT_STATE_DATE = '2026-03-22';
-  values.GENERATED_AT_UTC_ISO = '2026-03-22T12:00:00.000Z';
-  values.PRODUCT = 'Configured Project';
-  values.PROJECT_LINT_COMMAND = 'eslint "src/**/*.ts"';
-  values.NODE_VERSION = '24';
-  values.CI_INSTALL_COMMAND = 'npm ci';
-  values.PACKAGE_MANAGER_CACHE = 'npm';
-  values.CODEOWNERS_DEFAULT_TEAM = '@acme/platform';
-  values.CODEOWNERS_SECURITY_TEAM = '@acme/security';
-  values.PACKAGE_MANAGER_LOCKFILE = 'package-lock.json';
-  return { schemaVersion: 1, values };
-}
+import { decisions } from './bootstrap-test-helpers.mjs';
 
 test('bootstrap configure changes only installed template files and keeps JSON valid', async () => {
   const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bootstrap-configure-'));
@@ -57,6 +37,8 @@ test('bootstrap configure changes only installed template files and keeps JSON v
   assert.equal(workflow.includes(`CI_INSTALL_COMMAND: ${JSON.stringify('pnpm --filter "@acme/*\\tools" install')}`), true);
   assert.equal(workflow.match(/- run: corepack enable/g)?.length, 3);
   const packageJson = JSON.parse(await fs.readFile(path.join(targetDir, 'package.json'), 'utf8'));
+  const manifest = JSON.parse(await fs.readFile(path.join(targetDir, 'docs/ops/automation/harness-manifest.json'), 'utf8'));
+  assert.equal(manifest.decisionsPath, 'docs/ops/automation/bootstrap-decisions.json');
   assert.equal(packageJson.scripts['verify:fast'], '');
   assert.equal(typeof packageJson.scripts['verify:full'], 'string');
 });
@@ -123,9 +105,13 @@ test('bootstrap configure rejects malformed package.json before replacing files'
   const packetPath = path.join(targetDir, 'docs', 'ops', 'automation', 'bootstrap-decisions.json');
   await fs.writeFile(packetPath, JSON.stringify(await decisions()), 'utf8');
 
+  const manifestPath = path.join(targetDir, 'docs/ops/automation/harness-manifest.json');
+  const before = await fs.readFile(manifestPath, 'utf8');
   const result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /JSON/);
+  assert.equal(await fs.readFile(manifestPath, 'utf8'), before);
+  assert.equal(JSON.parse(before).managedFiles.some((entry) => entry.configuredSha256), false);
   assert.match(await fs.readFile(path.join(targetDir, 'VISION.md'), 'utf8'), /\{\{DOC_OWNER\}\}/);
 });
 
