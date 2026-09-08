@@ -1,43 +1,6 @@
 {
   "schemaVersion": 1,
-  "description": "Architecture verification config. Replace placeholders during adoption with real project tags, import boundaries, and optional graph checks.",
-  "checks": [
-    {
-      "type": "nx_dep_constraints",
-      "eslintConfigPath": "{{ESLINT_CONFIG_PATH}}",
-      "requiredConstraints": [
-        {
-          "sourceTag": "{{SOURCE_TAG_1}}",
-          "allow": [
-            "{{ALLOWED_TARGET_TAG_1A}}",
-            "{{ALLOWED_TARGET_TAG_1B}}"
-          ]
-        },
-        {
-          "sourceTag": "{{SOURCE_TAG_2}}",
-          "allow": [
-            "{{ALLOWED_TARGET_TAG_2A}}",
-            "{{ALLOWED_TARGET_TAG_2B}}"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "required_project_tags",
-      "projects": [
-        {
-          "path": "{{PROJECT_JSON_PATH_1}}",
-          "requiredTags": [
-            "{{PROJECT_REQUIRED_TAG_1}}"
-          ]
-        },
-        {
-          "path": "{{PROJECT_JSON_PATH_2}}",
-          "requiredTags": [
-            "{{PROJECT_REQUIRED_TAG_2}}"
-          ]
-        }
-      ]
-    }
-  ]
+  "description": "Project-owned architecture checks. Use relative_import_graph, forbidden_import_patterns_rg, or command_hook for the actual stack.",
+  "checks": [],
+  "rationale": "No project boundaries are configured yet. Wire checks during adoption before claiming architecture enforcement."
 }

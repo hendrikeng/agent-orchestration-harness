@@ -11,7 +11,7 @@ Reusable blueprint for bootstrapping high-quality agent-assisted software projec
 
 - This repository is the blueprint source.
 - `template/` is the install payload for adopted repositories.
-- `scripts/harness-sync.mjs` installs, updates, and drift-checks that payload in downstream repos; JSON drift output accounts for exact, modified, missing, bootstrap-only, and unexpected managed files.
+- `scripts/harness-sync.mjs` installs, updates, and checks that payload for drift in downstream repos. JSON output separates managed files, project-owned files, and bootstrap helpers.
 - `template/README.md` becomes the downstream repo root README after bootstrap.
 
 ## Blueprint Principles
@@ -59,7 +59,15 @@ node ./scripts/harness-sync.mjs adopt --target /path/to/existing-project --json 
 
 Use `drift` for a read-only comparison.
 
-Configuration keeps the source-template hash (`sha256`). It also records the configured file hash (`configuredSha256`) in the installed manifest. Updates compare local files against the configured baseline. Updates refuse genuine local edits, deleted managed files, and files that adoption preserved. The `--overwrite-modified` flag cannot bypass these conflicts.
+The distribution manifest separates harness-managed files from project-owned starter files through `projectOwnedGlobs`.
+Install and adopt copy both groups. The installed manifest records them in `managedFiles` and `projectFiles`.
+Project-owned files include root product docs, project configuration, workflows, and generated reports. Updates do not overwrite or restore these files.
+Framework scripts and remaining framework docs stay harness-managed. Review upstream changes to project-owned files separately.
+
+Configuration keeps the source-template hash (`sha256`) and the configured file hash (`configuredSha256`) for managed files.
+Updates compare managed files against the configured baseline. Local edits, deleted managed files, and preserved adoption conflicts stop the update.
+The `--overwrite-modified` flag cannot bypass these conflicts.
+Older manifests automatically release ownership of files that match the current `projectOwnedGlobs`. Updates preserve those files, including local edits and deletions.
 
 Updates reuse the approved packet at the recorded `decisionsPath`. The optional `--decisions` argument selects a different approved packet in the target repository. Missing decisions or invalid incoming templates stop the update before it changes files. The manifest advances only after configuration succeeds.
 
@@ -67,7 +75,20 @@ Updates reuse the approved packet at the recorded `decisionsPath`. The optional 
 node ./scripts/harness-sync.mjs update --target /path/to/existing-project
 ```
 
-Older manifests without a configured baseline stop with `CONFIGURED_BASELINE_MISSING`. To migrate:
+### Existing Project Migration
+
+This revision removes Nx-specific checks and adds explicit eval runtime identity. Existing project-owned configuration stays unchanged during updates.
+
+1. Remove the retired decisions: `ESLINT_CONFIG_PATH`, `SOURCE_TAG_*`, `ALLOWED_TARGET_TAG_*`, `PROJECT_JSON_PATH_*`, `PROJECT_REQUIRED_TAG_*`, and `EVAL_EVIDENCE_PATH_1`.
+2. Add approved values for `EVAL_RUNTIME_VERSION`, `EVAL_PROMPT_VERSION`, and `EVAL_TOOL_CONFIG_VERSION`.
+3. Replace `nx_dep_constraints` and `required_project_tags` checks with checks for the actual stack in `docs/governance/architecture-rules.json`.
+4. If no boundaries apply, record an empty `checks` array and a concrete `rationale`. This reports “not enforced,” not passing enforcement.
+5. Add `runtime` to `docs/agent-hardening/evals.config.json` with `provider`, `model`, `runtimeVersion`, `promptVersion`, and `toolConfigVersion` from the approved packet.
+6. Add repo-local prompt and tool configuration files to `additionalInputPaths` when those files affect agent behavior.
+7. Run the update command, refresh the eval report, and rerun the required evaluations.
+8. Record the evaluated `runtime` in the report. Run `npm run eval:verify`.
+
+Older manifests without a configured baseline stop with `CONFIGURED_BASELINE_MISSING`. To migrate that baseline first:
 
 1. Back up local edits.
 2. Create a checkout of the blueprint revision recorded in the installed manifest.

@@ -219,6 +219,11 @@ function isBootstrapOnly(relativePath, manifest) {
   return patterns.some((pattern) => matchesManagedPattern(relativePath, pattern));
 }
 
+function isProjectOwned(relativePath, manifest) {
+  return !isBootstrapOnly(relativePath, manifest) &&
+    (manifest.projectOwnedGlobs ?? []).some((pattern) => matchesManagedPattern(relativePath, pattern));
+}
+
 async function sha256(filePath) {
   const buffer = await fs.readFile(filePath);
   return createHash('sha256').update(buffer).digest('hex');
@@ -236,7 +241,7 @@ function gitHeadRevision() {
   return value || null;
 }
 
-export async function collectSourceFiles(manifest, { includeBootstrapOnly = false } = {}) {
+export async function collectSourceFiles(manifest, { includeBootstrapOnly = false, includeProjectOwned = false } = {}) {
   const sourceRoot = path.join(rootDir, manifest.sourceRoot);
   const targetRoot = String(manifest.targetRoot ?? '.').trim() || '.';
   assertWithinDirectory(rootDir, sourceRoot, 'sourceRoot');
@@ -250,6 +255,7 @@ export async function collectSourceFiles(manifest, { includeBootstrapOnly = fals
     if (isExcluded(relFromSource, manifest)) {
       continue;
     }
+    if (isProjectOwned(relFromSource, manifest) && !includeProjectOwned) continue;
     if (isBootstrapOnly(relFromSource, manifest) && !includeBootstrapOnly) {
       continue;
     }
@@ -418,13 +424,16 @@ async function writeDownstreamManifest(targetDir, manifest, sourceEntries, decis
   const manifestRel = downstreamManifestRel(manifest);
   const downstreamManifestPath = path.join(targetDir, manifestRel);
   await assertNoTargetSymlink(targetDir, manifestRel);
+  const installedEntries = await collectSourceFiles(manifest, { includeProjectOwned: true });
   const payload = prepareContractPayload(CONTRACT_IDS.downstreamHarnessManifest, {
     ownershipMode: manifest.ownershipMode,
     sourceManifest: sourceManifestId,
     sourceManifestSha256: await sha256(sourceManifestPath),
     sourceRevision: gitHeadRevision(),
     installedAt: new Date().toISOString(),
-    governedPlaceholders: await governedPlaceholders(sourceEntries),
+    governedPlaceholders: await governedPlaceholders(installedEntries),
+    projectFiles: installedEntries
+      .filter((entry) => isProjectOwned(toPosix(path.relative(manifest.targetRoot, entry.targetPath)), manifest)),
     managedFiles: sourceEntries,
     ...(decisionsPath ? { decisionsPath } : {})
   });
@@ -586,16 +595,27 @@ async function main() {
   const jsonOutput = asBoolean(options.json, false);
   const sourceManifest = await readJson(sourceManifestPath);
   const managedSourceEntries = await collectSourceFiles(sourceManifest);
-  const allSourceEntries = await collectSourceFiles(sourceManifest, { includeBootstrapOnly: true });
+  const allSourceEntries = await collectSourceFiles(sourceManifest, { includeBootstrapOnly: true, includeProjectOwned: true });
+  const projectOwned = allSourceEntries
+    .filter((entry) => isProjectOwned(toPosix(path.relative(sourceManifest.targetRoot, entry.targetPath)), sourceManifest))
+    .map((entry) => entry.targetPath);
+  const projectTargets = new Set(projectOwned);
   const managedTargets = new Set(managedSourceEntries.map((entry) => entry.targetPath));
   const bootstrapOnly = allSourceEntries
     .map((entry) => entry.targetPath)
-    .filter((targetPath) => !managedTargets.has(targetPath))
+    .filter((targetPath) => !managedTargets.has(targetPath) && !projectTargets.has(targetPath))
     .sort((left, right) => left.localeCompare(right));
   const copySourceEntries = command === 'install' || command === 'adopt' ? allSourceEntries : managedSourceEntries;
   const manifestState = await loadDownstreamManifest(targetDir, sourceManifest);
   const manifestValidation = validateDownstreamManifest(manifestState, sourceManifest);
-  const installedManifest = manifestState.valid ? manifestState.manifest : null;
+  const installedManifest = manifestState.valid ? { ...manifestState.manifest } : null;
+  if (installedManifest && (command === 'update' || command === 'drift')) {
+    // Release ownership without deleting or inspecting downstream project content.
+    installedManifest.managedFiles = installedManifest.managedFiles.filter((entry) => {
+      const target = assertSafeRelativePath(entry.targetPath, 'installed managed targetPath');
+      return !isProjectOwned(toPosix(path.relative(sourceManifest.targetRoot, target)), sourceManifest);
+    });
+  }
   const drift = await compareTarget(targetDir, managedSourceEntries, installedManifest);
   const fullTemplateDrift = command === 'install' || command === 'adopt'
     ? await compareTarget(targetDir, allSourceEntries, installedManifest)
@@ -609,6 +629,7 @@ async function main() {
       missing: drift.missing,
       modified: drift.modified,
       bootstrapOnly,
+      projectOwned,
       managedFileCount: managedSourceEntries.length,
       templatePayloadFileCount: allSourceEntries.length,
       unexpectedManaged: drift.unexpectedManaged,

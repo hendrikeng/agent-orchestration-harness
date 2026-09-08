@@ -41,6 +41,18 @@ test('downstream harness manifest requires managedFiles entries with size', () =
   );
 });
 
+test('downstream harness manifest validates optional project-owned file inventory', () => {
+  const payload = parseContractPayload(CONTRACT_IDS.downstreamHarnessManifest, {
+    ...validManifest, projectFiles: validManifest.managedFiles
+  });
+  assert.equal(payload.projectFiles[0].targetPath, 'README.md');
+  for (const projectFiles of [null, {}, [{ targetPath: 'README.md' }]]) {
+    assert.throws(() => parseContractPayload(CONTRACT_IDS.downstreamHarnessManifest, {
+      ...validManifest, projectFiles
+    }), /projectFiles/);
+  }
+});
+
 test('prepareContractPayload stamps schemaVersion 1', () => {
   const { schemaVersion, ...manifestWithoutSchema } = validManifest;
   const payload = prepareContractPayload(CONTRACT_IDS.downstreamHarnessManifest, manifestWithoutSchema);

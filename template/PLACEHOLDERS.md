@@ -50,16 +50,10 @@ The goal is not to fill blanks mechanically. Each replacement should make the ad
 - `{{CI_INSTALL_COMMAND}}`
 - `{{PACKAGE_MANAGER_CACHE}}`
 - `{{PACKAGE_MANAGER_LOCKFILE}}`
-- `{{ESLINT_CONFIG_PATH}}`
 - `{{PROJECT_LINT_COMMAND}}`
 - `{{PROJECT_TYPECHECK_COMMAND}}`
 - `{{PROJECT_UNIT_TEST_COMMAND}}`
 - `{{PROJECT_BUILD_COMMAND}}`
-- `{{SOURCE_TAG_1}}`, `{{SOURCE_TAG_2}}`
-- `{{ALLOWED_TARGET_TAG_1A}}`, `{{ALLOWED_TARGET_TAG_1B}}`
-- `{{ALLOWED_TARGET_TAG_2A}}`, `{{ALLOWED_TARGET_TAG_2B}}`
-- `{{PROJECT_JSON_PATH_1}}`, `{{PROJECT_JSON_PATH_2}}`
-- `{{PROJECT_REQUIRED_TAG_1}}`, `{{PROJECT_REQUIRED_TAG_2}}`
 
 ## Ownership/Approval Placeholders
 
@@ -76,7 +70,9 @@ The goal is not to fill blanks mechanically. Each replacement should make the ad
 - `{{CI_WORKFLOW_PATH}}`
 - `{{EVAL_PROVIDER}}`
 - `{{EVAL_MODEL_ID}}`
-- `{{EVAL_EVIDENCE_PATH_1}}`
+- `{{EVAL_RUNTIME_VERSION}}`
+- `{{EVAL_PROMPT_VERSION}}`
+- `{{EVAL_TOOL_CONFIG_VERSION}}`
 
 ## Recommended Defaults
 

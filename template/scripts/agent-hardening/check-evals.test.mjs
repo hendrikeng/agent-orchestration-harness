@@ -20,6 +20,8 @@ async function fixture(t) {
   const config = {
     reportPath: 'docs/generated/evals-report.json',
     freshnessMode: 'content-addressed',
+    runtime: { provider: 'fixture', model: 'fixture', runtimeVersion: '1', promptVersion: '1', toolConfigVersion: '1' },
+    additionalInputPaths: ['runtime-config.json'],
     minimumPassRate: 1,
     maxCriticalRegressions: 0,
     maxHighRegressions: 0,
@@ -46,7 +48,7 @@ async function fixture(t) {
   const inputSha256 = await computeEvalInputSha256(root, config);
   const now = new Date().toISOString();
   const report = {
-    status: 'pass', generatedAtUtc: now, inputSha256,
+    status: 'pass', generatedAtUtc: now, inputSha256, runtime: { ...config.runtime },
     summary: { total: 1, passed: 1, failed: 0, passRate: 1 },
     regressions: { criticalOpen: 0, highOpen: 0 },
     suites: [{
@@ -69,6 +71,8 @@ function verify(root, script = scriptPath) {
 test('eval verifier accepts recorded output and rejects incomplete or stale evidence', async (t) => {
   const cases = [
     ['recorded output', () => {}, null],
+    ['missing runtime', ({ report }) => { delete report.runtime; }, /runtime.provider does not match/],
+    ['wrong model', ({ report }) => { report.runtime.model = 'other'; }, /runtime.model does not match/],
     ['not run', ({ report }) => { report.status = 'not-run'; }, /not a completed passing run/],
     ['missing execution', ({ report }) => { delete report.suites[0].execution; }, /needs execution evidence/],
     ['stale execution', ({ report }) => { report.suites[0].execution.inputSha256 = 'old'; }, /evidence is stale/],
@@ -103,19 +107,34 @@ test('eval verifier accepts recorded output and rejects incomplete or stale evid
   }
 });
 
-test('refresh preserves unchanged runs but invalidates a pass after tool policy changes', async (t) => {
-  const { root, config, report } = await fixture(t);
-  assert.equal(verify(root, refreshPath).status, 0);
-  assert.equal(verify(root).status, 0);
-  await fs.appendFile(path.join(root, 'docs/agent-hardening/TOOL_POLICY.md'), '\nChanged approval rule.\n');
-  assert.match(verify(root).stderr, /does not match current/);
-  assert.equal(verify(root, refreshPath).status, 0);
-  const next = JSON.parse(await fs.readFile(path.join(root, config.reportPath), 'utf8'));
-  assert.equal(next.status, 'not-run');
-  assert.equal(next.summary.total, 0);
-  assert.equal(next.generatedAtUtc, report.generatedAtUtc);
-  assert.equal(next.suites[0].execution, undefined);
-  assert.match(verify(root).stderr, /not a completed passing run/);
+test('policy and runtime changes invalidate evidence without granting a refreshed pass', async (t) => {
+  const changes = [
+    ...['TOOL_POLICY.md', 'AGENT_LOOP.md', 'MEMORY_CONTEXT.md', 'OBSERVABILITY.md'].map((name) => [name,
+      ({ root }) => fs.appendFile(path.join(root, 'docs/agent-hardening', name), '\nChanged rule.\n')]),
+    ['runtime file', ({ root }) => fs.appendFile(path.join(root, 'runtime-config.json'), '\nchanged')],
+    ...['provider', 'model', 'runtimeVersion', 'promptVersion', 'toolConfigVersion'].map((field) => [field,
+      async ({ root, config }) => {
+        config.runtime[field] = 'changed';
+        await writeJson(root, 'docs/agent-hardening/evals.config.json', config);
+      }])
+  ];
+  for (const [name, change] of changes) {
+    await t.test(name, async (t) => {
+      const data = await fixture(t);
+      const { root, config, report } = data;
+      assert.equal(verify(root, refreshPath).status, 0);
+      assert.equal(verify(root).status, 0);
+      await change(data);
+      assert.match(verify(root).stderr, /does not match/);
+      assert.equal(verify(root, refreshPath).status, 0);
+      const next = JSON.parse(await fs.readFile(path.join(root, config.reportPath), 'utf8'));
+      assert.equal(next.status, 'not-run');
+      assert.equal(next.summary.total, 0);
+      assert.equal(next.generatedAtUtc, report.generatedAtUtc);
+      assert.equal(next.suites[0].execution, undefined);
+      assert.match(verify(root).stderr, /not a completed passing run/);
+    });
+  }
 });
 
 test('required failure fixtures reject taxonomy drift and embedded placeholders', async (t) => {

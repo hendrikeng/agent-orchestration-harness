@@ -54,15 +54,17 @@ function validateDownstreamHarnessManifest(payload) {
     asString(source.sourceRevision, contractId, 'sourceRevision', { allowEmpty: true });
   }
   asString(source.installedAt, contractId, 'installedAt');
-  if (!Array.isArray(source.managedFiles)) {
-    fail(contractId, 'managedFiles must be an array.');
-  }
-  for (const [index, entry] of source.managedFiles.entries()) {
-    const item = asObject(entry, contractId, `managedFiles[${index}]`);
-    asString(item.sourcePath, contractId, `managedFiles[${index}].sourcePath`);
-    asString(item.targetPath, contractId, `managedFiles[${index}].targetPath`);
-    asString(item.sha256, contractId, `managedFiles[${index}].sha256`);
-    asInteger(item.size, contractId, `managedFiles[${index}].size`, { minimum: 0 });
+  for (const field of ['managedFiles', 'projectFiles']) {
+    if (field === 'projectFiles' && source[field] === undefined) continue;
+    if (!Array.isArray(source[field])) fail(contractId, `${field} must be an array.`);
+    for (const [index, entry] of source[field].entries()) {
+      const label = `${field}[${index}]`;
+      const item = asObject(entry, contractId, label);
+      asString(item.sourcePath, contractId, `${label}.sourcePath`);
+      asString(item.targetPath, contractId, `${label}.targetPath`);
+      asString(item.sha256, contractId, `${label}.sha256`);
+      asInteger(item.size, contractId, `${label}.size`, { minimum: 0 });
+    }
   }
   return source;
 }

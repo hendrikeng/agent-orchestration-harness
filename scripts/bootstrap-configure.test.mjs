@@ -89,7 +89,7 @@ test('bootstrap configure rejects incomplete managed file manifests before repla
   await fs.writeFile(packetPath, JSON.stringify(await decisions()), 'utf8');
   const manifestPath = path.join(targetDir, 'docs', 'ops', 'automation', 'harness-manifest.json');
   const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
-  manifest.managedFiles = manifest.managedFiles.filter((entry) => entry.targetPath !== 'README.md');
+  manifest.managedFiles = manifest.managedFiles.filter((entry) => entry.targetPath !== 'docs/agent-hardening/RUN_CONTROL.md');
   await fs.writeFile(manifestPath, JSON.stringify(manifest), 'utf8');
 
   const result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });

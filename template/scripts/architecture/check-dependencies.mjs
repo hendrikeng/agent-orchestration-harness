@@ -29,27 +29,6 @@ async function exists(filePath) {
   }
 }
 
-async function readJson(relPath) {
-  const abs = path.join(rootDir, relPath);
-  const raw = await fs.readFile(abs, 'utf8');
-  return JSON.parse(raw);
-}
-
-function containsTemplatePlaceholder(value) {
-  return /\{\{[^}]+\}\}/.test(String(value ?? ''));
-}
-
-function findBoundaryRule(eslintConfig) {
-  for (const override of eslintConfig.overrides ?? []) {
-    const rule = override?.rules?.['@nx/enforce-module-boundaries'];
-    if (Array.isArray(rule) && rule.length >= 2 && typeof rule[1] === 'object') {
-      return rule[1];
-    }
-  }
-
-  return null;
-}
-
 const RG_CANDIDATES = [
   process.env.RG_BIN,
   'rg',
@@ -184,130 +163,6 @@ function runRg(pattern, absDir, globs = ['*.ts', '*.tsx']) {
   }
 
   return runRegexFallback(pattern, absDir, globs);
-}
-
-async function checkNxDependencyConstraints(check, violations, info) {
-  const eslintConfigPath = check.eslintConfigPath ?? '.eslintrc.base.json';
-  const unresolvedTemplateConfig =
-    containsTemplatePlaceholder(eslintConfigPath) ||
-    (check.requiredConstraints ?? []).some((constraint) => {
-      if (!constraint || typeof constraint !== 'object') {
-        return false;
-      }
-      return (
-        containsTemplatePlaceholder(constraint.sourceTag) ||
-        (constraint.allow ?? []).some((entry) => containsTemplatePlaceholder(entry))
-      );
-    });
-  if (unresolvedTemplateConfig) {
-    info.push('Skipped nx dependency constraints in template mode (unresolved placeholders).');
-    return;
-  }
-
-  const eslintConfig = await readJson(eslintConfigPath);
-  const boundaryRule = findBoundaryRule(eslintConfig);
-
-  if (!boundaryRule) {
-    violations.push({
-      code: 'ARCH_MISSING_NX_BOUNDARY_RULE',
-      message: `Could not find '@nx/enforce-module-boundaries' in ${eslintConfigPath}`,
-      file: eslintConfigPath
-    });
-    return;
-  }
-
-  const depConstraints = boundaryRule.depConstraints;
-  if (!Array.isArray(depConstraints) || depConstraints.length === 0) {
-      violations.push({
-        code: 'ARCH_EMPTY_NX_DEP_CONSTRAINTS',
-        message: 'No dependency constraints found for @nx/enforce-module-boundaries',
-        file: eslintConfigPath
-      });
-      return;
-  }
-
-  const bySourceTag = new Map();
-  for (const constraint of depConstraints) {
-    if (constraint?.sourceTag && Array.isArray(constraint.onlyDependOnLibsWithTags)) {
-      bySourceTag.set(constraint.sourceTag, new Set(constraint.onlyDependOnLibsWithTags));
-    }
-  }
-
-  for (const required of check.requiredConstraints ?? []) {
-    const sourceTag = required.sourceTag;
-    const allowed = bySourceTag.get(sourceTag);
-    if (!allowed) {
-        violations.push({
-          code: 'ARCH_MISSING_REQUIRED_CONSTRAINT',
-          message: `Missing dep constraint for source tag '${sourceTag}'`,
-          file: eslintConfigPath
-        });
-        continue;
-    }
-
-    for (const targetTag of required.allow ?? []) {
-      if (!allowed.has(targetTag)) {
-        violations.push({
-          code: 'ARCH_MISSING_ALLOWED_TAG',
-          message: `Constraint '${sourceTag}' must allow '${targetTag}'`,
-          file: eslintConfigPath
-        });
-      }
-    }
-  }
-}
-
-async function checkRequiredProjectTags(check, violations, info) {
-  const unresolvedTemplateConfig = (check.projects ?? []).some((project) => {
-    if (!project || typeof project !== 'object') {
-      return false;
-    }
-    return (
-      containsTemplatePlaceholder(project.path) ||
-      (project.requiredTags ?? []).some((tag) => containsTemplatePlaceholder(tag))
-    );
-  });
-  if (unresolvedTemplateConfig) {
-    info.push('Skipped required project tag checks in template mode (unresolved placeholders).');
-    return;
-  }
-
-  for (const project of check.projects ?? []) {
-    const relPath = project.path;
-    const absPath = path.join(rootDir, relPath);
-
-    if (!(await exists(absPath))) {
-      violations.push({
-        code: 'ARCH_MISSING_PROJECT_FILE',
-        message: `Missing project file: ${relPath}`,
-        file: relPath
-      });
-      continue;
-    }
-
-    let parsed;
-    try {
-      parsed = JSON.parse(await fs.readFile(absPath, 'utf8'));
-    } catch (error) {
-      violations.push({
-        code: 'ARCH_INVALID_PROJECT_JSON',
-        message: `Invalid JSON in ${relPath}: ${error instanceof Error ? error.message : String(error)}`,
-        file: relPath
-      });
-      continue;
-    }
-
-    const tags = Array.isArray(parsed.tags) ? parsed.tags : [];
-    for (const requiredTag of project.requiredTags ?? []) {
-      if (!tags.includes(requiredTag)) {
-        violations.push({
-          code: 'ARCH_MISSING_PROJECT_TAG',
-          message: `Project '${relPath}' must include tag '${requiredTag}'`,
-          file: relPath
-        });
-      }
-    }
-  }
 }
 
 export async function walkTsFiles(baseDir) {
@@ -628,19 +483,17 @@ async function main() {
   const config = JSON.parse(raw);
   const violations = [];
   const info = [];
+  if (!Array.isArray(config.checks)) fail('Architecture config must declare a checks array.');
+  if (config.checks.length === 0) {
+    if (typeof config.rationale !== 'string' || !config.rationale.trim()) {
+      fail('No architecture checks configured. Record a rationale or wire a project boundary check.');
+    }
+    console.log(`[architecture-verify] not enforced: ${config.rationale}`);
+    return;
+  }
 
-  for (const check of config.checks ?? []) {
+  for (const check of config.checks) {
     if (!check || typeof check !== 'object') {
-      continue;
-    }
-
-    if (check.type === 'nx_dep_constraints') {
-      await checkNxDependencyConstraints(check, violations, info);
-      continue;
-    }
-
-    if (check.type === 'required_project_tags') {
-      await checkRequiredProjectTags(check, violations, info);
       continue;
     }
 

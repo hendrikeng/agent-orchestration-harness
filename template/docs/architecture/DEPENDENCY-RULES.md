@@ -28,15 +28,18 @@ Source of Truth: This document and `docs/governance/architecture-rules.json`.
 
 ## Rule Configuration
 
-- Project tags, import graph checks, forbidden patterns, and command hooks live in `docs/governance/architecture-rules.json`.
+- Import graph checks, forbidden patterns, and command hooks live in the project-owned `docs/governance/architecture-rules.json`.
+- The blueprint does not require Nx, project tags, or an ESLint configuration format.
 - Human-readable policy belongs in this document; machine-readable gates belong in the JSON config.
 - If the docs and config disagree, fix both in the same slice before claiming architecture verification as evidence.
 
 ## Verification
 
 - Run `npm run architecture:verify`.
-- Keep rule config synchronized with actual project tags and imports.
-- `docs/governance/architecture-rules.json` may use project tags, relative import graph checks, forbidden import patterns, or command hooks.
-- Template placeholder values must be replaced during adoption before architecture gates can provide full coverage.
-- When architecture verification is skipped in template mode, downstream adoption must wire real project tags and import checks before treating the gate as production evidence.
+- Keep the rule config synchronized with actual imports.
+- Supported check types are `relative_import_graph`, `forbidden_import_patterns_rg`, and `command_hook`.
+- Use the project toolchain through a command hook when its parser covers imports more accurately than the built-in checks.
+- New projects start with no configured checks. During adoption, wire checks for the actual boundaries or record a concrete `rationale`.
+- An empty `checks` array with a rationale reports “not enforced.” This is not evidence of architecture enforcement.
+- Retired `nx_dep_constraints` and `required_project_tags` checks fail as unknown types. Replace them before verification.
 - Any dependency-rule change must include either updated verification config or a written reason why the rule is currently review-only.

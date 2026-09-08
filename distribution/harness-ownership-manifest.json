@@ -8,6 +8,28 @@
   "managedGlobs": [
     "**/*"
   ],
+  "projectOwnedGlobs": [
+    "*.md",
+    ".github/CODEOWNERS",
+    ".github/workflows/**",
+    "docs/*.md",
+    "docs/architecture/**",
+    "docs/deploy/**",
+    "docs/env/**",
+    "docs/exec-plans/**",
+    "docs/future/**",
+    "docs/generated/**",
+    "docs/ops/api/**",
+    "docs/ops/releases/release-mapping.md",
+    "docs/product-specs/**",
+    "docs/references/**",
+    "docs/ui/**",
+    "docs/governance/architecture-rules.json",
+    "docs/governance/doc-checks.config.json",
+    "docs/governance/policy-manifest.json",
+    "docs/governance/project-gates.json",
+    "docs/agent-hardening/evals.config.json"
+  ],
   "bootstrapOnlyGlobs": [
     "PLACEHOLDERS.md",
     "package.scripts.fragment.json",

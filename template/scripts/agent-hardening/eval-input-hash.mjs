@@ -4,15 +4,28 @@ import { resolveSafeRepoPath } from '../automation/lib/repo-paths.mjs';
 
 export function evalInputPaths(config) {
   const fixturePaths = (config.requiredFailureFixtures ?? []).map((entry) => String(entry.path));
-  return [
+  if (config.additionalInputPaths !== undefined &&
+      (!Array.isArray(config.additionalInputPaths) || config.additionalInputPaths.some((value) => typeof value !== 'string' || !value.trim()))) {
+    throw new Error('additionalInputPaths must be an array of repository-relative file paths.');
+  }
+  return [...new Set([
     'AGENTS.md',
+    'docs/PLANS.md',
+    'docs/governance/RULES.md',
+    'docs/design-docs/GIT-SAFETY.md',
+    'docs/design-docs/ENGINEERING-INVARIANTS.md',
     'docs/governance/policy-manifest.json',
     'docs/agent-hardening/evals.config.json',
+    'docs/agent-hardening/README.md',
+    'docs/agent-hardening/AGENT_LOOP.md',
+    'docs/agent-hardening/MEMORY_CONTEXT.md',
+    'docs/agent-hardening/OBSERVABILITY.md',
     'docs/agent-hardening/EVALS.md',
     'docs/agent-hardening/RUN_CONTROL.md',
     'docs/agent-hardening/TOOL_POLICY.md',
-    ...fixturePaths
-  ].sort();
+    ...fixturePaths,
+    ...(config.additionalInputPaths ?? [])
+  ])].sort();
 }
 
 export async function computeEvalInputSha256(rootDir, config) {

@@ -55,29 +55,17 @@ function replacementForToken(token) {
     CI_INSTALL_COMMAND: 'npm install --ignore-scripts',
     PACKAGE_MANAGER_CACHE: 'npm',
     PACKAGE_MANAGER_LOCKFILE: 'package-lock.json',
-    ESLINT_CONFIG_PATH: 'package.json',
     PROJECT_LINT_COMMAND: 'node ./scripts/automation/check-harness-alignment.mjs',
     PROJECT_TYPECHECK_COMMAND: 'node ./scripts/automation/check-plan-metadata.mjs',
     PROJECT_UNIT_TEST_COMMAND: 'node ./scripts/automation/check-harness-alignment.mjs',
     PROJECT_BUILD_COMMAND: 'node ./scripts/docs/check-governance.mjs',
-    PROJECT_JSON_PATH_1: 'package.json',
-    PROJECT_JSON_PATH_2: 'package.json',
-    PROJECT_REQUIRED_TAG_1: 'scope:smoke',
-    PROJECT_REQUIRED_TAG_2: 'type:app',
-    SOURCE_TAG_1: 'scope:smoke',
-    SOURCE_TAG_2: 'type:app',
-    ALLOWED_TARGET_TAG_1A: 'scope:smoke',
-    ALLOWED_TARGET_TAG_1B: 'type:shared',
-    ALLOWED_TARGET_TAG_2A: 'scope:smoke',
-    ALLOWED_TARGET_TAG_2B: 'type:app',
     GENERATED_AT_UTC_ISO: `${today}T00:00:00.000Z`,
     CONFORMANCE_SOURCE: 'scripts/ci/run-template-smoke.mjs',
     REPOSITORY_PROFILE_SNAKE_CASE: 'smoke_harness',
     CONFORMANCE_PURPOSE: 'template smoke verification',
     CI_WORKFLOW_PATH: '.github/workflows/ci.yml',
     EVAL_PROVIDER: 'stub',
-    EVAL_MODEL_ID: 'smoke-model',
-    EVAL_EVIDENCE_PATH_1: 'docs/generated/evals-report.json'
+    EVAL_MODEL_ID: 'smoke-model'
   };
   if (specific[token]) {
     return specific[token];

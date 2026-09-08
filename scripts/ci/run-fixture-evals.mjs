@@ -16,6 +16,11 @@ export async function runFixtureEvals(repoDir) {
   const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
   config.requiredSuites = [{ id: 'harness-eval-contract', status: 'pass' }];
   config.requiredFailureFixtures = [];
+  config.runtime = {
+    provider: 'node:test', model: 'not-applicable (harness-only fixture)',
+    runtimeVersion: process.version, promptVersion: 'harness-eval-contract-v1',
+    toolConfigVersion: 'node-test-v1'
+  };
   await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
   const inputSha256 = await computeEvalInputSha256(repoDir, config);
   const tests = [
@@ -33,7 +38,7 @@ export async function runFixtureEvals(repoDir) {
   const generatedAtUtc = new Date().toISOString();
   const report = {
     status: 'pass', generatedAtUtc, inputSha256,
-    provider: 'node:test', model: 'not-applicable (harness-only fixture)',
+    runtime: { ...config.runtime },
     summary: { total: 1, passed: 1, failed: 0, passRate: 1 },
     regressions: { criticalOpen: 0, highOpen: 0 },
     suites: [{

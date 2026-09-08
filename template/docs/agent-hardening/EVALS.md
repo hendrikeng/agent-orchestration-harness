@@ -55,17 +55,19 @@ Source of Truth: This document.
   - `status`: `pass` only after the required suites complete successfully
   - `generatedAtUtc` (provenance only in content-addressed mode)
   - `inputSha256` when `freshnessMode` is `content-addressed`
+  - `runtime` with `provider`, `model`, `runtimeVersion`, `promptVersion`, and `toolConfigVersion`, matching the config
   - `summary.total`, `summary.passed`, `summary.failed`, `summary.passRate`
   - `regressions.criticalOpen`, `regressions.highOpen`
   - `suites[]` with `id`, `status`, `total`, `passed`, `failed`, and `execution`
   - Each `execution` names `runner`, `executedAtUtc`, `inputSha256`, `fixtureIds`, and a repository-local `evidence` path.
   - `evidence[]` repository-local references
 - Recommended report fields:
-  - `provider`, `model`, and runtime or prompt version where available
   - suite-level `evidence` and failure class counts when the runner supports them
   - links to incident, plan, PR, or evidence-index entries for accepted exceptions
 - Gate policy:
-  - Content-addressed reports must match `AGENTS.md`, the policy manifest, eval policy, run control, tool policy, config, and failure fixtures.
+  - Content-addressed reports must match the agent-hardening docs, `AGENTS.md`, planning rules, governance rules, Git safety, engineering invariants, policy manifest, config, and fixtures.
+  - The config declares the current `runtime` identity. A change to its provider, model, runtime version, prompt version, or tool configuration version invalidates evidence.
+  - `additionalInputPaths` lists repo-local files for prompts, tools, runtime configuration, or other behavior rules. Changes to these files also invalidate evidence.
   - If inputs change, `npm run eval:refresh` resets results to `not-run` and removes execution references. It preserves the previous timestamp.
   - Refreshing unchanged inputs preserves results. It never creates execution evidence or grants a pass.
   - Time-bound reports, when configured, must satisfy `maxAgeDays`.
@@ -83,9 +85,11 @@ Source of Truth: This document.
 2. Run each required suite against the configured model, runtime, and tools, or perform the documented manual evaluation.
 3. Save observed output in a repository-local evidence file. For manual evaluations, include the reviewer, observations, and automation follow-up.
 4. Record the runner, execution timestamp, input hash, covered fixture IDs, and evidence path in each suite's `execution` object.
-5. Update the counts and report timestamp from the completed run. Set `status` to `pass` only for a successful run.
+5. Record the evaluated `runtime`, counts, and report timestamp from the completed run. Set `status` to `pass` only for a successful run.
 6. Run `npm run eval:verify`.
 
 The verifier checks evidence structure, scope, and input freshness. It cannot prove that a transcript is genuine or judge its meaning.
-The operator remains responsible for accurate observations and outcome assessment. A model, runtime, prompt, or tool change requires another run.
+The operator remains responsible for accurate observations, outcome assessment, and the runtime identity.
+Before a model, runtime, prompt, or tool change, update the config identity or its declared input files. Then rerun the evaluations.
+The verifier cannot detect external runtime changes that the operator does not record.
 CI fixtures can define harness-only suites. Passing those suites does not prove agent behavior or satisfy the default safety suites.

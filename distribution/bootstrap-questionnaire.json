@@ -25,9 +25,7 @@
       "questions": [
         { "id": "stacks", "prompt": "Describe the frontend, backend, and data stacks.", "placeholders": ["FRONTEND_STACK", "BACKEND_STACK", "DATA_STACK"], "inferFrom": ["package manifests", "lockfiles", "source tree", "deployment files"] },
         { "id": "contracts", "prompt": "How do applications share contracts, types, and primitives?", "placeholders": ["SHARED_CONTRACT_STRATEGY"], "inferFrom": ["workspace packages", "generated clients", "schema folders"] },
-        { "id": "entrypoints", "prompt": "Name two frontend and two backend entrypoints or mark missing surfaces not applicable.", "placeholders": ["FRONTEND_ENTRYPOINT_1", "FRONTEND_ENTRYPOINT_2", "BACKEND_ENTRYPOINT_1", "BACKEND_ENTRYPOINT_2"], "inferFrom": ["framework configuration", "application bootstrap files", "routes"] },
-        { "id": "dependency-tags", "prompt": "Define two source-layer tags and their allowed target tags.", "placeholders": ["SOURCE_TAG_1", "SOURCE_TAG_2", "ALLOWED_TARGET_TAG_1A", "ALLOWED_TARGET_TAG_1B", "ALLOWED_TARGET_TAG_2A", "ALLOWED_TARGET_TAG_2B"], "inferFrom": ["architecture layers", "import boundaries"] },
-        { "id": "json-contracts", "prompt": "Name two governed JSON paths and their required root tags.", "placeholders": ["PROJECT_JSON_PATH_1", "PROJECT_JSON_PATH_2", "PROJECT_REQUIRED_TAG_1", "PROJECT_REQUIRED_TAG_2"], "inferFrom": ["tracked configuration", "schema files", "manifests"] }
+        { "id": "entrypoints", "prompt": "Name two frontend and two backend entrypoints or mark missing surfaces not applicable.", "placeholders": ["FRONTEND_ENTRYPOINT_1", "FRONTEND_ENTRYPOINT_2", "BACKEND_ENTRYPOINT_1", "BACKEND_ENTRYPOINT_2"], "inferFrom": ["framework configuration", "application bootstrap files", "routes"] }
       ]
     },
     {
@@ -47,7 +45,6 @@
       "questions": [
         { "id": "node-package-manager", "prompt": "Use Node 24. Which npm, pnpm, or yarn install command, matching cache name, and matching lockfile apply?", "placeholders": ["NODE_VERSION", "CI_INSTALL_COMMAND", "PACKAGE_MANAGER_CACHE", "PACKAGE_MANAGER_LOCKFILE"], "inferFrom": ["package.json engines", ".nvmrc", "lockfiles", "CI workflow"], "default": "Node.js 24 with the detected package manager" },
         { "id": "project-commands", "prompt": "Which real commands run lint, typecheck, unit tests, and production build?", "placeholders": ["PROJECT_LINT_COMMAND", "PROJECT_TYPECHECK_COMMAND", "PROJECT_UNIT_TEST_COMMAND", "PROJECT_BUILD_COMMAND"], "inferFrom": ["package.json scripts", "CI workflow"] },
-        { "id": "lint-config", "prompt": "Where is the ESLint configuration?", "placeholders": ["ESLINT_CONFIG_PATH"], "inferFrom": ["eslint configuration files"] },
         { "id": "quality-score", "prompt": "Score the six quality dimensions with evidence-based integer values and name two current gaps.", "placeholders": ["SCORE_DOMAIN_CORRECTNESS", "SCORE_CRITICAL_SAFETY", "SCORE_AUTHZ_BOUNDARIES", "SCORE_ARCH_BOUNDARIES", "SCORE_DOC_GOVERNANCE", "SCORE_CRITICAL_TESTS", "QUALITY_GAP_1", "QUALITY_GAP_2"], "inferFrom": ["tests", "docs", "architecture checks", "security controls"] }
       ]
     },
@@ -56,8 +53,8 @@
       "title": "Ownership and conformance",
       "questions": [
         { "id": "codeowners", "prompt": "Which GitHub teams own default and security-sensitive paths? Use @org/team for both.", "placeholders": ["CODEOWNERS_DEFAULT_TEAM", "CODEOWNERS_SECURITY_TEAM"], "inferFrom": ["CODEOWNERS", "repository organization"] },
-        { "id": "conformance", "prompt": "Define the conformance profile name, purpose, source, generation time, CI workflow, and evidence path.", "placeholders": ["GENERATED_AT_UTC_ISO", "CONFORMANCE_SOURCE", "REPOSITORY_PROFILE_SNAKE_CASE", "CONFORMANCE_PURPOSE", "CI_WORKFLOW_PATH", "EVAL_EVIDENCE_PATH_1"], "inferFrom": ["repository name", "CI workflow", "current date", "docs"] },
-        { "id": "eval-runtime", "prompt": "Which provider and model produce the recorded agent evaluation evidence?", "placeholders": ["EVAL_PROVIDER", "EVAL_MODEL_ID"], "inferFrom": ["agent settings", "existing eval reports"] }
+        { "id": "conformance", "prompt": "Define the conformance profile name, purpose, source, generation time, and CI workflow.", "placeholders": ["GENERATED_AT_UTC_ISO", "CONFORMANCE_SOURCE", "REPOSITORY_PROFILE_SNAKE_CASE", "CONFORMANCE_PURPOSE", "CI_WORKFLOW_PATH"], "inferFrom": ["repository name", "CI workflow", "current date", "docs"] },
+        { "id": "eval-runtime", "prompt": "Which provider, model, runtime version, prompt version, and tool configuration version will the evaluations use?", "placeholders": ["EVAL_PROVIDER", "EVAL_MODEL_ID", "EVAL_RUNTIME_VERSION", "EVAL_PROMPT_VERSION", "EVAL_TOOL_CONFIG_VERSION"], "inferFrom": ["agent settings", "runtime package version", "prompt and tool configuration", "existing eval reports"] }
       ]
     }
   ]

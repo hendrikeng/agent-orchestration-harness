@@ -2,6 +2,14 @@
   "schemaVersion": 1,
   "reportPath": "docs/generated/evals-report.json",
   "freshnessMode": "content-addressed",
+  "runtime": {
+    "provider": "{{EVAL_PROVIDER}}",
+    "model": "{{EVAL_MODEL_ID}}",
+    "runtimeVersion": "{{EVAL_RUNTIME_VERSION}}",
+    "promptVersion": "{{EVAL_PROMPT_VERSION}}",
+    "toolConfigVersion": "{{EVAL_TOOL_CONFIG_VERSION}}"
+  },
+  "additionalInputPaths": [],
   "minimumPassRate": 0.98,
   "maxCriticalRegressions": 0,
   "maxHighRegressions": 0,

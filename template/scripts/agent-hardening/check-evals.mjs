@@ -248,6 +248,16 @@ async function main() {
     fail(`Report generatedAtUtc is invalid: ${String(generatedAtRaw)}`);
   }
 
+  for (const field of ['provider', 'model', 'runtimeVersion', 'promptVersion', 'toolConfigVersion']) {
+    const expected = config.runtime?.[field];
+    if (typeof expected !== 'string' || !expected.trim() || containsTemplatePlaceholder(expected)) {
+      fail(`Eval config runtime.${field} must name the current evaluated system.`);
+    }
+    if (report.runtime?.[field] !== expected) {
+      fail(`Eval report runtime.${field} does not match the configured system; rerun evaluations.`);
+    }
+  }
+
   const ageDays = daysBetween(generatedAt, new Date());
   if (ageDays < 0) {
     fail(`Eval report generatedAtUtc is in the future: ${generatedAtRaw}`);

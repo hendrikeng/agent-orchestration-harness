@@ -1,8 +1,13 @@
 {
   "generatedAtUtc": "{{GENERATED_AT_UTC_ISO}}",
-  "inputSha256": "644c7068daf28572d5c4e8a505b5da6064dee3f805aac661471837862c3dd544",
-  "provider": "{{EVAL_PROVIDER}}",
-  "model": "{{EVAL_MODEL_ID}}",
+  "inputSha256": "487edfab7ebbd84a287fbfd3ba09e75e635951d55aabd423d440c1e6a5164ca3",
+  "runtime": {
+    "provider": "{{EVAL_PROVIDER}}",
+    "model": "{{EVAL_MODEL_ID}}",
+    "runtimeVersion": "{{EVAL_RUNTIME_VERSION}}",
+    "promptVersion": "{{EVAL_PROMPT_VERSION}}",
+    "toolConfigVersion": "{{EVAL_TOOL_CONFIG_VERSION}}"
+  },
   "summary": {
     "total": 0,
     "passed": 0,
@@ -57,8 +62,6 @@
       "failed": 0
     }
   ],
-  "evidence": [
-    "{{EVAL_EVIDENCE_PATH_1}}"
-  ],
+  "evidence": [],
   "status": "not-run"
 }

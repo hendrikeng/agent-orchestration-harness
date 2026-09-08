@@ -37,29 +37,17 @@ function replacementForToken(token) {
     CI_INSTALL_COMMAND: 'npm install --ignore-scripts',
     PACKAGE_MANAGER_CACHE: 'npm',
     PACKAGE_MANAGER_LOCKFILE: 'package-lock.json',
-    ESLINT_CONFIG_PATH: '.eslintrc.base.json',
     PROJECT_LINT_COMMAND: 'node --check src/reading-list.js',
     PROJECT_TYPECHECK_COMMAND: 'node ./scripts/app-contract-check.mjs',
     PROJECT_UNIT_TEST_COMMAND: 'node --test test/reading-list.test.mjs',
     PROJECT_BUILD_COMMAND: 'node ./scripts/app-build.mjs',
-    PROJECT_JSON_PATH_1: 'package.json',
-    PROJECT_JSON_PATH_2: 'project.json',
-    PROJECT_REQUIRED_TAG_1: 'scope:reading-list',
-    PROJECT_REQUIRED_TAG_2: 'type:app',
-    SOURCE_TAG_1: 'scope:reading-list',
-    SOURCE_TAG_2: 'type:app',
-    ALLOWED_TARGET_TAG_1A: 'scope:reading-list',
-    ALLOWED_TARGET_TAG_1B: 'type:shared',
-    ALLOWED_TARGET_TAG_2A: 'scope:reading-list',
-    ALLOWED_TARGET_TAG_2B: 'type:app',
     GENERATED_AT_UTC_ISO: `${today}T00:00:00.000Z`,
     CONFORMANCE_SOURCE: 'scripts/ci/run-golden-adopted-repo.mjs',
     REPOSITORY_PROFILE_SNAKE_CASE: 'reading_list',
     CONFORMANCE_PURPOSE: 'golden adopted repo verification',
     CI_WORKFLOW_PATH: '.github/workflows/ci.yml',
     EVAL_PROVIDER: 'fixture',
-    EVAL_MODEL_ID: 'golden-adopted-repo',
-    EVAL_EVIDENCE_PATH_1: 'docs/generated/evals-report.json'
+    EVAL_MODEL_ID: 'golden-adopted-repo'
   };
   if (replacements[token]) {
     return replacements[token];
@@ -128,7 +116,6 @@ async function writePackageJson(repoDir) {
     engines: {
       node: '>=24 <25'
     },
-    tags: ['scope:reading-list'],
     scripts: {
       'app:lint': 'node --check src/reading-list.js',
       'app:contract': 'node ./scripts/app-contract-check.mjs',
@@ -142,36 +129,17 @@ async function writePackageJson(repoDir) {
 }
 
 async function writeArchitectureFiles(repoDir) {
-  const eslintConfig = {
-    overrides: [
-      {
-        files: ['*.js', '*.mjs'],
-        rules: {
-          '@nx/enforce-module-boundaries': [
-            'error',
-            {
-              depConstraints: [
-                {
-                  sourceTag: 'scope:reading-list',
-                  onlyDependOnLibsWithTags: ['scope:reading-list', 'type:shared']
-                },
-                {
-                  sourceTag: 'type:app',
-                  onlyDependOnLibsWithTags: ['scope:reading-list', 'type:app']
-                }
-              ]
-            }
-          ]
-        }
-      }
-    ]
+  const config = {
+    schemaVersion: 1,
+    checks: [{
+      type: 'forbidden_import_patterns_rg',
+      checks: [{
+        sourceDir: 'src', globs: ['*.js'], pattern: 'node:(fs|child_process)',
+        label: 'Domain functions must not perform filesystem or process IO.'
+      }]
+    }]
   };
-  const projectJson = {
-    name: 'reading-list',
-    tags: ['type:app']
-  };
-  await fs.writeFile(path.join(repoDir, '.eslintrc.base.json'), `${JSON.stringify(eslintConfig, null, 2)}\n`, 'utf8');
-  await fs.writeFile(path.join(repoDir, 'project.json'), `${JSON.stringify(projectJson, null, 2)}\n`, 'utf8');
+  await fs.writeFile(path.join(repoDir, 'docs/governance/architecture-rules.json'), `${JSON.stringify(config, null, 2)}\n`);
 }
 
 async function writeProjectGates(repoDir) {

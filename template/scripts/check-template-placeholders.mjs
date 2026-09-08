@@ -55,7 +55,7 @@ async function installedScope() {
     if (!Array.isArray(manifest.governedPlaceholders) || !Array.isArray(manifest.managedFiles)) return null;
     return {
       placeholders: new Set(manifest.governedPlaceholders),
-      paths: new Set(manifest.managedFiles.map((entry) => toPosix(entry.targetPath)))
+      paths: new Set([...manifest.managedFiles, ...(manifest.projectFiles ?? [])].map((entry) => toPosix(entry.targetPath)))
     };
   } catch (error) {
     if (error?.code === 'ENOENT') return null;

@@ -170,7 +170,7 @@ test('harness-sync treats bootstrap helpers as removable after adoption', async 
   assert.equal(result.status, 0);
   const payload = JSON.parse(String(result.stdout));
   assert.equal(payload.exact.length, payload.managedFileCount);
-  assert.equal(payload.templatePayloadFileCount, payload.managedFileCount + payload.bootstrapOnly.length);
+  assert.equal(payload.templatePayloadFileCount, payload.managedFileCount + payload.bootstrapOnly.length + payload.projectOwned.length);
   assert.deepEqual(payload.bootstrapOnly, [...bootstrapOnlyPaths].sort((left, right) => left.localeCompare(right)));
   for (const relative of bootstrapOnlyPaths) {
     assert.equal(payload.missing.includes(relative), false);
@@ -192,12 +192,12 @@ test('harness-sync drift treats a missing manifest as drift', async () => {
 test('harness-sync drift reports non-file managed paths as modified JSON', async () => {
   const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-path-drift-'));
   assert.equal(run(['install', '--target', targetDir]).status, 0);
-  await fs.rm(path.join(targetDir, 'AGENTS.md'));
-  await fs.mkdir(path.join(targetDir, 'AGENTS.md'));
+  await fs.rm(path.join(targetDir, 'docs/agent-hardening/RUN_CONTROL.md'));
+  await fs.mkdir(path.join(targetDir, 'docs/agent-hardening/RUN_CONTROL.md'));
 
   const result = run(['drift', '--target', targetDir, '--json', 'true']);
   assert.equal(result.status, 2, String(result.stderr));
-  assert.equal(JSON.parse(String(result.stdout)).modified.includes('AGENTS.md'), true);
+  assert.equal(JSON.parse(String(result.stdout)).modified.includes('docs/agent-hardening/RUN_CONTROL.md'), true);
 });
 
 test('harness-sync drift reports intermediate non-directory paths as modified JSON', async () => {
@@ -215,12 +215,12 @@ test('harness-sync drift reports modified managed files', async () => {
   const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-drift-'));
   assert.equal(run(['install', '--target', targetDir]).status, 0);
 
-  await fs.writeFile(path.join(targetDir, 'README.md'), '# Modified\n', 'utf8');
+  await fs.writeFile(path.join(targetDir, 'docs/agent-hardening/RUN_CONTROL.md'), '# Modified\n', 'utf8');
   const result = run(['drift', '--target', targetDir, '--json', 'true']);
 
   assert.equal(result.status, 2);
   const payload = JSON.parse(String(result.stdout));
-  assert.equal(payload.modified.includes('README.md'), true);
+  assert.equal(payload.modified.includes('docs/agent-hardening/RUN_CONTROL.md'), true);
 });
 
 test('harness-sync update never force-overwrites modified managed files', async () => {
@@ -229,17 +229,15 @@ test('harness-sync update never force-overwrites modified managed files', async 
 
   assert.equal(run(['install', '--target', targetDir], callerDir).status, 0);
   await configure(targetDir);
-  await fs.writeFile(path.join(targetDir, 'README.md'), '# Drifted\n', 'utf8');
+  const managedPath = 'docs/agent-hardening/RUN_CONTROL.md';
+  await fs.writeFile(path.join(targetDir, managedPath), '# Drifted\n', 'utf8');
 
-  const refused = run(['update', '--target', targetDir], callerDir);
-  assert.equal(refused.status, 1);
-  assert.match(String(refused.stderr), /MODIFIED_MANAGED_FILES/);
-  assert.equal(await fs.readFile(path.join(targetDir, 'README.md'), 'utf8'), '# Drifted\n');
-
-  const result = run(['update', '--target', targetDir, '--overwrite-modified', 'true'], callerDir);
-  assert.equal(result.status, 1);
-  assert.match(String(result.stderr), /MODIFIED_MANAGED_FILES.*README.md/);
-  assert.equal(await fs.readFile(path.join(targetDir, 'README.md'), 'utf8'), '# Drifted\n');
+  for (const extra of [[], ['--overwrite-modified', 'true']]) {
+    const result = run(['update', '--target', targetDir, ...extra], callerDir);
+    assert.equal(result.status, 1);
+    assert.match(String(result.stderr), /MODIFIED_MANAGED_FILES.*RUN_CONTROL.md/);
+    assert.equal(await fs.readFile(path.join(targetDir, managedPath), 'utf8'), '# Drifted\n');
+  }
 });
 
 test('harness-sync update compares configured hashes rather than raw source hashes', async () => {
@@ -248,7 +246,7 @@ test('harness-sync update compares configured hashes rather than raw source hash
   await configure(targetDir);
   const manifestPath = path.join(targetDir, 'docs', 'ops', 'automation', 'harness-manifest.json');
   const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
-  const readme = manifest.managedFiles.find((entry) => entry.targetPath === 'README.md');
+  const readme = manifest.managedFiles.find((entry) => entry.targetPath === 'docs/agent-hardening/RUN_CONTROL.md');
   readme.sha256 = 'previous-revision-hash';
   await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
@@ -386,19 +384,20 @@ test('configured adoption updates incoming templates and fails safely before con
   assert.equal(configured.status, 0, configured.stderr);
   const manifestPath = path.join(target, 'docs/ops/automation/harness-manifest.json');
   const before = await fs.readFile(manifestPath, 'utf8');
-  const sourceReadme = path.join(blueprint, 'template/README.md');
+  const managedPath = 'docs/agent-hardening/RUN_CONTROL.md';
+  const sourceReadme = path.join(blueprint, 'template', managedPath);
   await fs.appendFile(sourceReadme, '\nIncoming for {{PRODUCT}}\n');
   assert.equal(sync('drift').status, 2);
   // A manually reconciled file that already equals incoming configured content is safe.
-  await fs.appendFile(path.join(target, 'README.md'), '\nIncoming for Configured Project\n');
+  await fs.appendFile(path.join(target, managedPath), '\nIncoming for Configured Project\n');
   const updated = sync('update');
   assert.equal(updated.status, 0, updated.stderr);
-  assert.match(await fs.readFile(path.join(target, 'README.md'), 'utf8'), /Incoming for Configured Project/);
+  assert.match(await fs.readFile(path.join(target, managedPath), 'utf8'), /Incoming for Configured Project/);
   const after = await fs.readFile(manifestPath, 'utf8');
   assert.notEqual(after, before);
-  const entry = JSON.parse(after).managedFiles.find((item) => item.targetPath === 'README.md');
+  const entry = JSON.parse(after).managedFiles.find((item) => item.targetPath === managedPath);
   assert.notEqual(entry.sha256, entry.configuredSha256);
-  assert.equal(entry.configuredSha256, createHash('sha256').update(await fs.readFile(path.join(target, 'README.md'))).digest('hex'));
+  assert.equal(entry.configuredSha256, createHash('sha256').update(await fs.readFile(path.join(target, managedPath))).digest('hex'));
   assert.equal(sync('drift').status, 0);
   // Bootstrap helpers may already have been cleaned up in an established project.
   for (const relative of bootstrapOnlyPaths) await fs.rm(path.join(target, relative));
@@ -426,13 +425,48 @@ test('configured adoption updates incoming templates and fails safely before con
   packet.values.NEW_REQUIRED_DECISION = 'Approved new value';
   await fs.writeFile(packetPath, JSON.stringify(packet));
   assert.equal(sync('update').status, 0);
-  assert.match(await fs.readFile(path.join(target, 'README.md'), 'utf8'), /Approved new value/);
+  assert.match(await fs.readFile(path.join(target, managedPath), 'utf8'), /Approved new value/);
 
   // A later render failure must not advance either source or configured baselines.
-  await fs.writeFile(path.join(blueprint, 'template/docs/governance/project-gates.json'), '{ {{PRODUCT}}');
+  await fs.writeFile(path.join(blueprint, 'template/docs/agent-hardening/eval-fixtures/fake-tests-final-claim.json'), '{ {{PRODUCT}}');
   const preFailure = await snapshot();
   assert.equal(sync('update').status, 1);
   assert.deepEqual(await snapshot(), preFailure);
+});
+
+test('project-owned files survive edits, deletion, and legacy ownership release during updates', async (t) => {
+  const target = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-project-owned-'));
+  t.after(() => fs.rm(target, { recursive: true, force: true }));
+  assert.equal(run(['install', '--target', target]).status, 0);
+  await configure(target);
+  const manifestPath = path.join(target, 'docs/ops/automation/harness-manifest.json');
+  const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  const paths = ['README.md', 'VISION.md', 'AGENTS.md', 'docs/product-specs/CURRENT-STATE.md',
+    'docs/governance/project-gates.json', 'docs/generated/evals-report.json', '.github/workflows/ci.yml'];
+  for (const relative of paths) {
+    assert.equal(manifest.managedFiles.some((entry) => entry.targetPath === relative), false);
+    assert.equal(manifest.projectFiles.some((entry) => entry.targetPath === relative), true);
+    await fs.writeFile(path.join(target, relative), `Local content: ${relative}\n`);
+  }
+  await fs.rm(path.join(target, 'VISION.md'));
+  for (const legacy of [false, true]) {
+    if (legacy) {
+      // Older manifests claimed these starter files, even without usable baselines.
+      const current = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+      current.managedFiles.push(...current.projectFiles.map((entry) => ({ ...entry, preservedLocal: true })));
+      delete current.projectFiles;
+      await fs.writeFile(manifestPath, JSON.stringify(current));
+    }
+    assert.equal(run(['drift', '--target', target]).status, 0);
+    const result = run(['update', '--target', target]);
+    assert.equal(result.status, 0, result.stderr);
+    for (const relative of paths.filter((value) => value !== 'VISION.md')) {
+      assert.equal(await fs.readFile(path.join(target, relative), 'utf8'), `Local content: ${relative}\n`);
+    }
+    await assert.rejects(fs.access(path.join(target, 'VISION.md')));
+    const next = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+    assert.equal(next.managedFiles.some((entry) => paths.includes(entry.targetPath)), false);
+  }
 });
 
 test('legacy manifests require explicit baseline migration', async () => {
@@ -466,15 +500,16 @@ test('legacy manifests require explicit baseline migration', async () => {
 
 test('adoption preserves genuine edits even after configuration records a baseline', async () => {
   const target = await fs.mkdtemp(path.join(os.tmpdir(), 'harness-sync-preserved-baseline-'));
-  await fs.writeFile(path.join(target, 'README.md'), '# Existing project\n');
+  await fs.mkdir(path.join(target, 'docs/agent-hardening'), { recursive: true });
+  await fs.writeFile(path.join(target, 'docs/agent-hardening/RUN_CONTROL.md'), '# Existing project\n');
   await fs.writeFile(path.join(target, 'package.json'), '{"name":"existing"}\n');
   await fs.writeFile(path.join(target, 'package-lock.json'), '{"lockfileVersion":3}\n');
   assert.equal(run(['adopt', '--target', target]).status, 0);
   await configure(target);
   const result = run(['update', '--target', target]);
   assert.equal(result.status, 1);
-  assert.match(String(result.stderr), /MODIFIED_MANAGED_FILES.*README.md/);
-  assert.equal(await fs.readFile(path.join(target, 'README.md'), 'utf8'), '# Existing project\n');
+  assert.match(String(result.stderr), /MODIFIED_MANAGED_FILES.*RUN_CONTROL.md/);
+  assert.equal(await fs.readFile(path.join(target, 'docs/agent-hardening/RUN_CONTROL.md'), 'utf8'), '# Existing project\n');
 });
 
 test('harness-sync refuses to install over the blueprint repository root', async () => {

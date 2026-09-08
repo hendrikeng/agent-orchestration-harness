@@ -67,6 +67,18 @@ test('placeholder checker ignores non-blueprint tokens after installation', asyn
   assert.equal(result.status, 0, result.stderr);
 });
 
+test('placeholder checker still scans project-owned starter files', async () => {
+  const rootDir = await createFixtureRoot();
+  await fs.mkdir(path.join(rootDir, 'docs/ops/automation'), { recursive: true });
+  await fs.writeFile(path.join(rootDir, 'docs/ops/automation/harness-manifest.json'), JSON.stringify({
+    governedPlaceholders: ['DOC_OWNER'], managedFiles: [], projectFiles: [{ targetPath: 'README.md' }]
+  }));
+  await fs.writeFile(path.join(rootDir, 'README.md'), `Owner: ${placeholder('DOC_OWNER')}\n`);
+  const result = runPlaceholderCheck(rootDir);
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /README\.md:1:Owner:/);
+});
+
 test('placeholder checker reports unresolved template tokens with file and line', async () => {
   const rootDir = await createFixtureRoot();
   await fs.mkdir(path.join(rootDir, 'docs'), { recursive: true });

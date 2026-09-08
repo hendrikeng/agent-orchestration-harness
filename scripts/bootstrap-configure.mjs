@@ -276,7 +276,14 @@ async function main() {
   }
   const revision = currentRevision();
   if (manifest.sourceRevision !== revision) throw new Error(`Blueprint source revision does not match the installed harness: ${manifest.sourceRevision} != ${revision}.`);
-  for (const entry of manifest.managedFiles) {
+  const projectFiles = manifest.projectFiles ?? [];
+  const expectedInstalled = await collectSourceFiles(sourceManifest, { includeProjectOwned: true });
+  const installedFiles = [...manifest.managedFiles, ...projectFiles];
+  const installedPaths = new Set(installedFiles.map((entry) => `${entry.sourcePath}\0${entry.targetPath}`));
+  if (installedFiles.length !== expectedInstalled.length || expectedInstalled.some((entry) => !installedPaths.has(`${entry.sourcePath}\0${entry.targetPath}`))) {
+    throw new Error('Installed harness manifest does not contain the complete installed file set.');
+  }
+  for (const entry of installedFiles) {
     const sourcePath = path.resolve(rootDir, String(entry.sourcePath ?? ''));
     const targetPath = path.resolve(targetDir, String(entry.targetPath ?? ''));
     if (!isWithin(path.join(rootDir, 'template'), sourcePath)) throw new Error(`Installed manifest contains an invalid source path: ${entry.sourcePath}`);
