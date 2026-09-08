@@ -52,9 +52,6 @@ jobs:
       - run: npm run pr:verify
         if: github.event_name == 'pull_request'
       - run: npm run plans:verify:closeout
-        env:
-          PLAN_CLOSEOUT_BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
-          PLAN_CLOSEOUT_BRANCH_NAME: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
       - run: npm run verify:fast
 
   full-gate:

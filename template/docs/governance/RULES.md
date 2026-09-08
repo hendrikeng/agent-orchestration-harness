@@ -78,6 +78,21 @@ Source of Truth: This document.
 - Machine-readable config must satisfy its adjacent schema when one exists.
 - Schema changes and verifier changes belong in the same slice as config shape changes.
 
+## Scoped Plan Closeout
+
+Closeout checks the delivered change, not every unfinished task in the repository.
+Unchanged inherited active plans can remain on `dev` and `main`. Their index and worktree bytes must match the comparison baseline.
+New or changed active plans must complete before delivery. Removed active plans require completed plans with the same Plan-IDs and matching evidence.
+Completed plans need completed status, checked must-land IDs, resolved required approval, and nonempty changed evidence.
+The checker validates the worktree and index separately. Unstaged repairs cannot authorize an incomplete staged closeout.
+
+PRs retain their source-branch classification. Protected-branch deliveries retain the path-based low-risk fix exemption. Sensitive changes still require completed plans.
+Local feature iteration does not require premature closeout. CI or an explicit comparison baseline checks delivery from feature branches.
+A pending merge uses its pre-merge HEAD. An ordinary local commit uses its first parent.
+CI uses verified GitHub event identity and the PR base, merge-group base, or pre-push commit, including attached checkouts.
+An explicit `PLAN_CLOSEOUT_BASE_REF` must resolve to a real pre-change ancestor. Missing history, ambiguous merges, and empty HEAD comparisons fail closed.
+Historical merge receipts remain audit records. The checker does not reuse them as permission for later work.
+
 ## Exception Discipline
 
 - Exceptions must name owner, reason, scope, expiry, and follow-up.
