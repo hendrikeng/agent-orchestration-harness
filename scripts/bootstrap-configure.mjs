@@ -15,7 +15,7 @@ function parseArgs(argv) {
   const options = {};
   for (let index = 0; index < argv.length; index += 2) {
     const key = argv[index];
-    if (!key?.startsWith('--') || argv[index + 1] === undefined) throw new Error('Usage: node scripts/bootstrap-configure.mjs --target <path> --decisions <path> [--json true|false] [--baseline-only true|false]');
+    if (!key?.startsWith('--') || argv[index + 1] === undefined) throw new Error('Usage: node scripts/bootstrap-configure.mjs --target <path> --decisions <path> [--json true|false] [--baseline-only true|false] [--bootstrap-policy <reviewed ownership manifest>]');
     options[key.slice(2)] = argv[index + 1];
   }
   if (!options.target || !options.decisions) throw new Error('Both --target and --decisions are required.');
@@ -103,7 +103,7 @@ function validateValues(questionnaire, values) {
     throw new Error('OUT_OF_SCOPE_ITEM values must be unique.');
   }
   for (const key of ['CODEOWNERS_DEFAULT_TEAM', 'CODEOWNERS_SECURITY_TEAM']) {
-    if (!/^@[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(values[key])) throw new Error(`${key} must use @org/team format.`);
+    if (!/^@[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\/[A-Za-z0-9_.-]+)?$/.test(values[key])) throw new Error(`${key} must use @username or @org/team format.`);
   }
   const secret = Object.entries(values).find(([, value]) => secretPattern.test(value));
   if (secret) throw new Error(`${secret[0]} appears to contain a secret.`);
@@ -256,6 +256,8 @@ async function mergePackageScripts(plan) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  const baselineOnly = options['baseline-only'] === 'true';
+  if (options['bootstrap-policy'] && !baselineOnly) throw new Error('--bootstrap-policy is only supported with --baseline-only true.');
   const targetDir = await fs.realpath(path.resolve(options.target));
   const decisionsPath = await fs.realpath(path.resolve(options.decisions));
   if (!isWithin(targetDir, decisionsPath)) throw new Error('Decision packet must be inside the target repository.');
@@ -271,13 +273,27 @@ async function main() {
   const sourceManifest = JSON.parse(sourceManifestContent);
   const expectedManaged = await collectSourceFiles(sourceManifest);
   const installedManaged = new Set(manifest.managedFiles.map((entry) => `${entry.sourcePath}\0${entry.targetPath}`));
-  if (manifest.managedFiles.length !== expectedManaged.length || expectedManaged.some((entry) => !installedManaged.has(`${entry.sourcePath}\0${entry.targetPath}`))) {
-    throw new Error('Installed harness manifest does not contain the complete managed file set.');
+  const expectedKeys = new Set(expectedManaged.map((entry) => `${entry.sourcePath}\0${entry.targetPath}`));
+  let bootstrapOnlyGlobs = [];
+  if (options['bootstrap-policy']) {
+    // The caller supplies policy from its reviewed blueprint, never from the target repository.
+    const policy = JSON.parse(await fs.readFile(path.resolve(options['bootstrap-policy']), 'utf8'));
+    if (policy.schemaVersion !== 1 || policy.ownershipMode !== sourceManifest.ownershipMode || policy.sourceRoot !== sourceManifest.sourceRoot || policy.targetRoot !== sourceManifest.targetRoot || !Array.isArray(policy.bootstrapOnlyGlobs) || policy.bootstrapOnlyGlobs.some((pattern) => typeof pattern !== 'string' || !pattern.trim())) {
+      throw new Error('Bootstrap policy must be a compatible reviewed ownership manifest with bootstrapOnlyGlobs.');
+    }
+    bootstrapOnlyGlobs = policy.bootstrapOnlyGlobs;
+  }
+  const omitted = expectedManaged.filter((entry) => !installedManaged.has(`${entry.sourcePath}\0${entry.targetPath}`));
+  const missingRequired = omitted.filter((entry) => !bootstrapOnlyGlobs.some((pattern) => path.posix.matchesGlob(path.posix.relative(sourceManifest.sourceRoot, entry.sourcePath), pattern)));
+  if (installedManaged.size !== manifest.managedFiles.length || [...installedManaged].some((key) => !expectedKeys.has(key)) || missingRequired.length) {
+    throw new Error(`Installed harness manifest does not contain the complete managed file set. Missing required files: ${missingRequired.map((entry) => entry.targetPath).join(', ') || 'none'}; duplicate or unexpected entries are not supported.`);
   }
   const revision = currentRevision();
   if (manifest.sourceRevision !== revision) throw new Error(`Blueprint source revision does not match the installed harness: ${manifest.sourceRevision} != ${revision}.`);
   const projectFiles = manifest.projectFiles ?? [];
-  const expectedInstalled = await collectSourceFiles(sourceManifest, { includeProjectOwned: true });
+  const omittedKeys = new Set(omitted.map((entry) => `${entry.sourcePath}\0${entry.targetPath}`));
+  const expectedInstalled = (await collectSourceFiles(sourceManifest, { includeProjectOwned: true }))
+    .filter((entry) => !omittedKeys.has(`${entry.sourcePath}\0${entry.targetPath}`));
   const installedFiles = [...manifest.managedFiles, ...projectFiles];
   const installedPaths = new Set(installedFiles.map((entry) => `${entry.sourcePath}\0${entry.targetPath}`));
   if (installedFiles.length !== expectedInstalled.length || expectedInstalled.some((entry) => !installedPaths.has(`${entry.sourcePath}\0${entry.targetPath}`))) {
@@ -311,7 +327,6 @@ async function main() {
     const configured = configureContent(entry.targetPath, await fs.readFile(path.join(rootDir, entry.sourcePath)), decisions.values);
     return { ...entry, configuredSha256: sha256(configured) };
   }));
-  const baselineOnly = options['baseline-only'] === 'true';
   if (baselineOnly && manifest.managedFiles.every((entry) => entry.configuredSha256)) {
     throw new Error('The installed harness manifest already has a configured baseline.');
   }
@@ -328,7 +343,7 @@ async function main() {
     decisionsPath: path.relative(targetDir, decisionsPath).replaceAll(path.sep, '/'),
     managedFiles: configuredEntries
   }, null, 2)}\n`);
-  const payload = { target: targetDir, changedFiles, scriptConflicts };
+  const payload = { target: targetDir, changedFiles, scriptConflicts, omittedBootstrapOnly: omitted.map((entry) => entry.targetPath) };
   if (options.json === 'true') process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   else process.stdout.write(`[bootstrap-configure] changed=${changedFiles.length} scriptConflicts=${scriptConflicts.length}\n`);
 }

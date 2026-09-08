@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
+import assert from 'node:assert/strict';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -47,7 +48,7 @@ function asBoolean(value, fallback = false) {
 
 function usage() {
   process.stderr.write(
-    'Usage: node ./scripts/harness-sync.mjs <install|adopt|update|drift> --target <path> [--json true|false] [--decisions <path>]\n'
+    'Usage: node ./scripts/harness-sync.mjs <install|adopt|update|drift|reconcile> --target <path> [--json true|false] [--decisions <path>] [--review <repo-relative-path>]\n'
   );
 }
 
@@ -420,7 +421,7 @@ async function governedPlaceholders(sourceEntries) {
   return [...placeholders].sort((left, right) => left.localeCompare(right));
 }
 
-async function writeDownstreamManifest(targetDir, manifest, sourceEntries, decisionsPath) {
+async function writeDownstreamManifest(targetDir, manifest, sourceEntries, decisionsPath, reconciliation) {
   const manifestRel = downstreamManifestRel(manifest);
   const downstreamManifestPath = path.join(targetDir, manifestRel);
   await assertNoTargetSymlink(targetDir, manifestRel);
@@ -435,9 +436,89 @@ async function writeDownstreamManifest(targetDir, manifest, sourceEntries, decis
     projectFiles: installedEntries
       .filter((entry) => isProjectOwned(toPosix(path.relative(manifest.targetRoot, entry.targetPath)), manifest)),
     managedFiles: sourceEntries,
-    ...(decisionsPath ? { decisionsPath } : {})
+    ...(decisionsPath ? { decisionsPath } : {}),
+    ...(reconciliation ? { reconciliation } : {})
   });
   await writeTextFileAtomic(downstreamManifestPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+}
+
+async function recordReconciliation(targetDir, sourceManifest, sourceEntries, installedManifest, reviewOption) {
+  const reviewPath = assertSafeRelativePath(reviewOption, 'review path');
+  await assertTargetFileShape(targetDir, reviewPath);
+  const reviewContent = await fs.readFile(path.join(targetDir, reviewPath));
+  const reviewSha256 = createHash('sha256').update(reviewContent).digest('hex');
+  const review = JSON.parse(reviewContent);
+  assert(review.version === 1 && review.action === 'record-reconciliation', 'Unsupported reconciliation review.');
+  assert(typeof review.approvedAt === 'string' && /Z$/.test(review.approvedAt) &&
+    Number.isFinite(Date.parse(review.approvedAt)) && Date.parse(review.approvedAt) <= Date.now(),
+  'Reconciliation requires a dated, approved review.');
+  assert(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(review.sourceRevision) &&
+    review.sourceRevision === gitHeadRevision(), 'Reviewed source revision changed.');
+  assert(review.sourceManifestSha256 === await sha256(sourceManifestPath), 'Reviewed source manifest changed.');
+  const installedPath = path.join(targetDir, downstreamManifestRel(sourceManifest));
+  assert(review.installedManifestSha256 === await sha256(installedPath), 'Reviewed installed manifest changed.');
+
+  const { loadDecisions, configureContent } = await import('./bootstrap-configure.mjs');
+  assert(typeof review.decisionsPath === 'string' && review.decisionsPath.trim(), 'Review must name its decision packet.');
+  const { decisions, decisionsPath } = await loadDecisions(targetDir,
+    path.join(targetDir, assertSafeRelativePath(review.decisionsPath, 'review decisions path')));
+  assert(review.decisionsSha256 === await sha256(decisionsPath), 'Reviewed decisions changed.');
+  const incoming = new Map(sourceEntries.map((entry) => [entry.targetPath, entry]));
+  const previousPaths = installedManifest.managedFiles.map((entry) => entry.targetPath);
+  assert(new Set(previousPaths).size === previousPaths.length, 'Installed manifest contains duplicate paths.');
+  const requiredPaths = new Set([...previousPaths, ...incoming.keys()]);
+  assert(!requiredPaths.has(reviewPath) && path.join(targetDir, reviewPath) !== installedPath &&
+    path.join(targetDir, reviewPath) !== decisionsPath, 'Review must be a separate evidence file.');
+  assert(Array.isArray(review.files) && review.files.length === requiredPaths.size, 'Review must cover the complete managed file set.');
+  const seen = new Set();
+  for (const file of review.files) {
+    assert(requiredPaths.has(file.targetPath) && !seen.has(file.targetPath), 'Review contains an unexpected or duplicate path.');
+    seen.add(file.targetPath);
+    await assertTargetFileShape(targetDir, file.targetPath);
+    const currentHash = await sha256(path.join(targetDir, file.targetPath)).catch((error) => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    });
+    assert(file.currentSha256 === currentHash, `Reviewed target changed: ${file.targetPath}`);
+    const entry = incoming.get(file.targetPath);
+    if (!entry) {
+      assert(file.resolution === 'retired' && file.sourceSha256 === null && file.configuredSha256 === null,
+        `Retired path needs an explicit review: ${file.targetPath}`);
+      continue; // Recording provenance never deletes retained historical files.
+    }
+    const raw = await fs.readFile(path.join(rootDir, entry.sourcePath));
+    assert(file.sourceSha256 === createHash('sha256').update(raw).digest('hex'),
+      `Reviewed source file changed: ${file.targetPath}`);
+    const expected = createHash('sha256').update(configureContent(entry.targetPath, raw, decisions.values)).digest('hex');
+    assert(file.sourceSha256 === entry.sha256 && file.configuredSha256 === expected,
+      `Reviewed incoming template changed: ${file.targetPath}`);
+    assert(currentHash !== null, `Required managed file is missing: ${file.targetPath}`);
+    const customized = currentHash !== expected;
+    assert(file.resolution === (customized ? 'preserve-local' : 'configured'),
+      `Incorrect resolution for ${file.targetPath}; customizations must remain preserved.`);
+    entry.configuredSha256 = currentHash;
+    entry.preservedLocal = customized;
+  }
+  // No content writes occurred. Recheck reviewed inputs before the manifest-only write.
+  for (const file of review.files) {
+    const entry = incoming.get(file.targetPath);
+    if (entry) assert(file.sourceSha256 === await sha256(path.join(rootDir, entry.sourcePath)),
+      `Reviewed source file changed: ${file.targetPath}`);
+    await assertTargetFileShape(targetDir, file.targetPath);
+    const current = await sha256(path.join(targetDir, file.targetPath)).catch((error) => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    });
+    assert(current === file.currentSha256, `Reviewed target changed: ${file.targetPath}`);
+  }
+  assert(review.sourceRevision === gitHeadRevision(), 'Reviewed source revision changed.');
+  assert(review.sourceManifestSha256 === await sha256(sourceManifestPath), 'Reviewed source manifest changed.');
+  assert(review.installedManifestSha256 === await sha256(installedPath), 'Reviewed installed manifest changed.');
+  assert(review.decisionsSha256 === await sha256(decisionsPath), 'Reviewed decisions changed.');
+  assert(reviewSha256 === await sha256(path.join(targetDir, reviewPath)), 'Reconciliation review changed.');
+  await writeDownstreamManifest(targetDir, sourceManifest, sourceEntries,
+    toPosix(path.relative(targetDir, decisionsPath)), { reviewPath, reviewSha256 });
+  return sourceEntries.filter((entry) => entry.preservedLocal).map((entry) => entry.targetPath);
 }
 
 async function pruneEmptyDirectories(baseDir, directoryPath) {
@@ -577,7 +658,7 @@ async function installOrUpdate(targetDir, manifest, copyEntries, managedEntries,
 
 async function main() {
   const { command, options } = parseArgs(process.argv.slice(2));
-  if (!['install', 'adopt', 'update', 'drift'].includes(command)) {
+  if (!['install', 'adopt', 'update', 'drift', 'reconcile'].includes(command)) {
     usage();
     process.exit(1);
   }
@@ -647,6 +728,14 @@ async function main() {
   }
 
   await preflightTargetPaths(targetDir, sourceManifest, copySourceEntries, managedSourceEntries, installedManifest);
+
+  if (command === 'reconcile') {
+    if (!manifestValidation.ok) throw new Error(`[${manifestValidation.code}] ${manifestValidation.message}`);
+    const preserved = await recordReconciliation(targetDir, sourceManifest, managedSourceEntries, installedManifest, options.review);
+    process.stdout.write(`${JSON.stringify({ command, target: targetDir, filesCopied: 0, filesRemoved: 0,
+      filesPreserved: preserved.length, preserved, manifestPath: manifestState.filePath }, null, 2)}\n`);
+    return;
+  }
 
   if (command === 'install' && manifestState.exists) {
     throw new Error('[TARGET_ALREADY_INSTALLED] This target already has a harness manifest. Use update or drift.');
