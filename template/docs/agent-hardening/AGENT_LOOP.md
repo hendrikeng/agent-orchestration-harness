@@ -45,6 +45,8 @@ The default loop is:
 
 ## Stop Rules
 
+- When blocked, name the unfinished requirement and the blocking instruction with its file path, or the missing fact. State the smallest decision or approval needed to resume. Continue independent work that remains authorized and does not depend on the blocker.
+
 - Stop before implementation when product behavior, schema, architecture, or workflow would be invented without code, docs, or explicit user intent.
 - Stop and re-scope when the request becomes multiple independent outcomes.
 - Stop before privileged writes, destructive git/file operations, credential changes, production writes, or broad crawling unless explicit approval and policy coverage exist.

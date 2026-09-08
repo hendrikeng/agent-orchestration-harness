@@ -55,6 +55,7 @@ Source of Truth: This document.
 - Use tool-level validation for tool calls whenever possible; workflow-level input/output checks alone are not enough for delegated or multi-agent tool paths.
 - Preserve traceability for model calls, tool calls, handoffs, guardrails, approvals, file edits, and validation results in the run trace or evidence path.
 - Before pause, context compaction, background handoff, or agent handoff, preserve a continuation packet with objective, active plan, acceptance criteria, changed files, validation status, evidence paths, blockers, and next action.
+- In the continuation packet, include existing approvals, their source, scope, and expiry, plus actions that still require approval. Context compaction or handoff does not expand authorization. Do not ask again for an action whose approval remains valid. Delegated actions still follow `TOOL_POLICY.md`.
 - Autonomous or background execution is ready only when the goal contract, approval boundaries, project gates, traceability, and closeout evidence are explicit before the run starts.
 - Treat runtime memory, conversation state, encrypted reasoning items, background tasks, and compacted context as accelerators, not authority. Durable decisions must land in repo-local docs, plans, tests, manifests, or evidence.
 - If runtime behavior conflicts with repo policy, repo policy wins until an explicit canonical doc change lands.

@@ -24,7 +24,7 @@ Use one plan file per executable slice. Keep `## Already-True Baseline`, `## Mus
 2. Create one future slice and make its acceptance criteria, dependencies, targets, risk, validation, and must-land checklist explicit.
 3. Set it to `ready-for-promotion` only when execution ambiguity and blockers are resolved.
 4. Promote it into `docs/exec-plans/active/` and implement the smallest safe slice.
-5. Run `npm run verify:fast` during implementation and `npm run verify:full` plus relevant domain checks before completion.
+5. During implementation, run the smallest focused checks that prove the changed behavior. At the merge or delivery boundary, run `npm run verify:full` and relevant domain checks. If the changed contract requires these gates earlier, run them earlier. Report skipped checks explicitly.
 6. Move the completed plan to `docs/exec-plans/completed/` and preserve concise evidence under `docs/exec-plans/evidence-index/`.
 
 ## Canonical Detail Owners

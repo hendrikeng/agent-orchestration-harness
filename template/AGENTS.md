@@ -45,6 +45,7 @@ Prefer established local patterns over new abstractions. If no strong example ex
 ## Intent Precedence
 
 - Explicit user intent is binding.
+- Within an approved implementation scope, make reasonable, reversible implementation choices using established repository patterns. State material assumptions and continue through implementation, focused validation, fixes, and evidence. Ask only when missing information materially changes the requested outcome, scope, public contract, or authorization.
 - Planning-only work belongs in `docs/future/`; do not edit product code for planning-only requests.
 - Implementation begins only when the user asks to execute a slice or make a direct change.
 - Small, isolated, low-risk fixes may use the `fix/*` lane when the PR is enough review evidence.
