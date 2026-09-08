@@ -55,7 +55,7 @@
       "id": "governance",
       "title": "Ownership and conformance",
       "questions": [
-        { "id": "codeowners", "prompt": "Which GitHub teams own default and security-sensitive paths? Use @org/team for both.", "placeholders": ["CODEOWNERS_DEFAULT_TEAM", "CODEOWNERS_SECURITY_TEAM"], "inferFrom": ["CODEOWNERS", "repository organization"] },
+        { "id": "codeowners", "prompt": "Which GitHub users or teams own default and security-sensitive paths? Use @username or @org/team for each.", "placeholders": ["CODEOWNERS_DEFAULT_TEAM", "CODEOWNERS_SECURITY_TEAM"], "inferFrom": ["CODEOWNERS", "repository organization"] },
         { "id": "conformance", "prompt": "Define the conformance profile name, purpose, source, generation time, CI workflow, and evidence path.", "placeholders": ["GENERATED_AT_UTC_ISO", "CONFORMANCE_SOURCE", "REPOSITORY_PROFILE_SNAKE_CASE", "CONFORMANCE_PURPOSE", "CI_WORKFLOW_PATH", "EVAL_EVIDENCE_PATH_1"], "inferFrom": ["repository name", "CI workflow", "current date", "docs"] },
         { "id": "eval-runtime", "prompt": "Which provider and model produce the recorded agent evaluation evidence?", "placeholders": ["EVAL_PROVIDER", "EVAL_MODEL_ID"], "inferFrom": ["agent settings", "existing eval reports"] }
       ]

@@ -11,13 +11,15 @@ const scriptPath = path.join(rootDir, 'scripts', 'bootstrap-configure.mjs');
 const harnessSyncPath = path.join(rootDir, 'scripts', 'harness-sync.mjs');
 import { decisions } from './bootstrap-test-helpers.mjs';
 
-test('bootstrap configure changes only installed template files and keeps JSON valid', async () => {
+for (const owner of ['@acme/platform', '@hendrikeng']) test(`bootstrap configure preserves files and accepts CODEOWNERS ${owner}`, async () => {
   const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bootstrap-configure-'));
   assert.equal(spawnSync(process.execPath, [harnessSyncPath, 'install', '--target', targetDir]).status, 0);
   await fs.writeFile(path.join(targetDir, 'application-template.txt'), '{{PRODUCT}} must stay untouched\n', 'utf8');
   await fs.writeFile(path.join(targetDir, 'package.json'), JSON.stringify({ name: 'existing', scripts: { 'verify:fast': '' } }), 'utf8');
   const packetPath = path.join(targetDir, 'docs', 'ops', 'automation', 'bootstrap-decisions.json');
   const packet = await decisions();
+  packet.values.CODEOWNERS_DEFAULT_TEAM = owner;
+  packet.values.CODEOWNERS_SECURITY_TEAM = owner;
   packet.values.CI_INSTALL_COMMAND = 'pnpm --filter "@acme/*\\tools" install';
   packet.values.PACKAGE_MANAGER_CACHE = 'pnpm';
   packet.values.PACKAGE_MANAGER_LOCKFILE = 'pnpm-lock.yaml';
@@ -28,6 +30,9 @@ test('bootstrap configure changes only installed template files and keeps JSON v
   assert.equal(result.status, 0, result.stderr);
   const payload = JSON.parse(result.stdout);
   assert.equal(payload.changedFiles.includes('README.md'), true);
+  const codeowners = await fs.readFile(path.join(targetDir, '.github/CODEOWNERS'), 'utf8');
+  assert.ok(codeowners.includes(`* ${owner}\n`));
+  assert.ok(codeowners.includes(`**/security/** ${owner} ${owner}\n`));
   assert.equal(payload.scriptConflicts.includes('verify:fast'), true);
   assert.match(await fs.readFile(path.join(targetDir, 'README.md'), 'utf8'), /Configured Project/);
   assert.equal(await fs.readFile(path.join(targetDir, 'application-template.txt'), 'utf8'), '{{PRODUCT}} must stay untouched\n');
@@ -92,10 +97,16 @@ test('bootstrap configure rejects incomplete managed file manifests before repla
   manifest.managedFiles = manifest.managedFiles.filter((entry) => entry.targetPath !== 'README.md');
   await fs.writeFile(manifestPath, JSON.stringify(manifest), 'utf8');
 
-  const result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /does not contain the complete managed file set/);
-  assert.match(await fs.readFile(path.join(targetDir, 'README.md'), 'utf8'), /\{\{PRODUCT\}\}/);
+  for (const policyArgs of [[], ['--baseline-only', 'true', '--bootstrap-policy', path.join(rootDir, 'distribution/harness-ownership-manifest.json')]]) {
+    const result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath, ...policyArgs], { encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /does not contain the complete managed file set.*README.md/);
+    assert.equal(await fs.readFile(manifestPath, 'utf8'), JSON.stringify(manifest));
+    assert.match(await fs.readFile(path.join(targetDir, 'README.md'), 'utf8'), /\{\{PRODUCT\}\}/);
+  }
+  const nonBaseline = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath, '--bootstrap-policy', path.join(rootDir, 'distribution/harness-ownership-manifest.json')], { encoding: 'utf8' });
+  assert.equal(nonBaseline.status, 1);
+  assert.match(nonBaseline.stderr, /only supported with --baseline-only true/);
 });
 
 test('bootstrap configure rejects malformed package.json before replacing files', async () => {
@@ -152,7 +163,7 @@ test('bootstrap configure rejects unsupported packet versions and invalid dates'
   await fs.writeFile(packetPath, JSON.stringify(packet), 'utf8');
   result = spawnSync(process.execPath, [scriptPath, '--target', targetDir, '--decisions', packetPath], { encoding: 'utf8' });
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /CODEOWNERS_DEFAULT_TEAM must use @org\/team format/);
+  assert.match(result.stderr, /CODEOWNERS_DEFAULT_TEAM must use @username or @org\/team format/);
 
   packet.values.CODEOWNERS_DEFAULT_TEAM = '@acme/platform';
   packet.values.OUT_OF_SCOPE_ITEM_2 = packet.values.OUT_OF_SCOPE_ITEM_1;

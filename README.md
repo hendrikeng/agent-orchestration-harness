@@ -80,6 +80,38 @@ Older manifests without a configured baseline stop with `CONFIGURED_BASELINE_MIS
 
 Do not adopt the repository again or copy source hashes into the configured baseline.
 
+### Reviewed manual reconciliation
+
+If an approved manual migration preserves project customizations, `reconcile` can record the new installation after those merges. It writes only the manifest. It does not copy, remove, or restore target files.
+
+```bash
+node ./scripts/harness-sync.mjs reconcile --target /path/to/existing-project \
+  --review docs/ops/automation/reconciliation-review.json
+```
+
+Create the review file inside the target repository. Keep it separate from managed files, the manifest, and the decision packet. Record approval only after the user reviews the migration.
+
+The review contract contains:
+
+- `version: 1`, `action: "record-reconciliation"`, and `approvedAt` with the actual UTC approval timestamp.
+- `sourceRevision` with the full Git commit ID, and `sourceManifestSha256` with the source ownership manifest hash.
+- `installedManifestSha256` with the unchanged installed manifest hash.
+- `decisionsPath` with the approved repository-relative packet path, and `decisionsSha256` with its hash.
+- `files` with exactly one entry for every path in the installed and incoming managed sets.
+
+Each file entry contains `targetPath`, `currentSha256`, `sourceSha256`, `configuredSha256`, and `resolution`.
+Use `configureContent()` from `scripts/bootstrap-configure.mjs` to calculate the expected configured content.
+
+- `configured`: Current content equals the configured incoming template.
+- `preserve-local`: Current content differs from that template. The new manifest must retain `preservedLocal: true`.
+- `retired`: The old managed path is absent from the incoming set. Source and configured hashes are `null`. Retained content stays untouched.
+
+`currentSha256` can be `null` only for an absent retired file. All incoming managed files must exist.
+Changed hashes, duplicate or unexpected entries, missing coverage, and symlink paths stop the command before mutation.
+
+The new manifest records the review path and its hash. Legacy manifests do not need a fabricated historical configured baseline.
+Normal updates still reject preserved customizations that differ from incoming templates. Reconciliation does not grant an evaluation pass or merge approval.
+
 The current adoption workflow requires Node.js 24 and a `package.json` with an npm, pnpm, or yarn lockfile. New-project configuration currently creates an npm `package-lock.json` or `npm-shrinkwrap.json`. Other stacks can use audit mode, but automatic adoption is not yet supported.
 
 `distribution/bootstrap-questionnaire.json` is the machine-readable decision contract. It covers every placeholder and supplies inference hints for interactive tools. `scripts/bootstrap-configure.mjs` validates an approved decision packet, replaces governed placeholders, and merges non-conflicting package scripts. Interactive clients should call these blueprint-owned interfaces instead of copying their logic.
