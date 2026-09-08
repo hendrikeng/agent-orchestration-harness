@@ -275,13 +275,18 @@ async function main() {
   const installedManaged = new Set(manifest.managedFiles.map((entry) => `${entry.sourcePath}\0${entry.targetPath}`));
   const expectedKeys = new Set(expectedManaged.map((entry) => `${entry.sourcePath}\0${entry.targetPath}`));
   let bootstrapOnlyGlobs = [];
+  let projectOwnedGlobs = [];
   if (options['bootstrap-policy']) {
     // The caller supplies policy from its reviewed blueprint, never from the target repository.
     const policy = JSON.parse(await fs.readFile(path.resolve(options['bootstrap-policy']), 'utf8'));
     if (policy.schemaVersion !== 1 || policy.ownershipMode !== sourceManifest.ownershipMode || policy.sourceRoot !== sourceManifest.sourceRoot || policy.targetRoot !== sourceManifest.targetRoot || !Array.isArray(policy.bootstrapOnlyGlobs) || policy.bootstrapOnlyGlobs.some((pattern) => typeof pattern !== 'string' || !pattern.trim())) {
       throw new Error('Bootstrap policy must be a compatible reviewed ownership manifest with bootstrapOnlyGlobs.');
     }
+    if (policy.projectOwnedGlobs !== undefined && (!Array.isArray(policy.projectOwnedGlobs) || policy.projectOwnedGlobs.some((pattern) => typeof pattern !== 'string' || !pattern.trim()))) {
+      throw new Error('Bootstrap policy projectOwnedGlobs must be an array of non-empty patterns.');
+    }
     bootstrapOnlyGlobs = policy.bootstrapOnlyGlobs;
+    projectOwnedGlobs = policy.projectOwnedGlobs ?? [];
   }
   const omitted = expectedManaged.filter((entry) => !installedManaged.has(`${entry.sourcePath}\0${entry.targetPath}`));
   const missingRequired = omitted.filter((entry) => !bootstrapOnlyGlobs.some((pattern) => path.posix.matchesGlob(path.posix.relative(sourceManifest.sourceRoot, entry.sourcePath), pattern)));
@@ -323,7 +328,17 @@ async function main() {
     if (sha256(source) !== entry.sha256) throw new Error(`Blueprint source does not match the installed harness for ${entry.targetPath}.`);
   }
   const { decisions, expected } = await loadDecisions(targetDir, decisionsPath);
+  const releasedProjectOwned = new Set(manifest.managedFiles
+    .filter((entry) => {
+      const relativePath = path.posix.relative(sourceManifest.sourceRoot, entry.sourcePath);
+      // Bootstrap-only rules take precedence over project ownership, as in harness-sync.
+      return !bootstrapOnlyGlobs.some((pattern) => path.posix.matchesGlob(relativePath, pattern)) &&
+        projectOwnedGlobs.some((pattern) => path.posix.matchesGlob(relativePath, pattern));
+    })
+    .map((entry) => entry.targetPath));
   const configuredEntries = await Promise.all(manifest.managedFiles.map(async (entry) => {
+    // The reviewed updater releases these paths. Do not invent retired decisions or a historical configured baseline.
+    if (releasedProjectOwned.has(entry.targetPath)) return { ...entry, preservedLocal: true };
     const configured = configureContent(entry.targetPath, await fs.readFile(path.join(rootDir, entry.sourcePath)), decisions.values);
     return { ...entry, configuredSha256: sha256(configured) };
   }));
@@ -335,6 +350,7 @@ async function main() {
   const scriptConflicts = baselineOnly ? [] : await mergePackageScripts(packageConfiguration);
   // Never bless preserved adoption files or later local edits as template-owned content.
   for (const entry of configuredEntries) {
+    if (releasedProjectOwned.has(entry.targetPath)) continue;
     const actualHash = sha256(await fs.readFile(path.join(targetDir, entry.targetPath)));
     entry.preservedLocal = actualHash !== entry.configuredSha256;
     entry.configuredSha256 = actualHash;
@@ -343,7 +359,7 @@ async function main() {
     decisionsPath: path.relative(targetDir, decisionsPath).replaceAll(path.sep, '/'),
     managedFiles: configuredEntries
   }, null, 2)}\n`);
-  const payload = { target: targetDir, changedFiles, scriptConflicts, omittedBootstrapOnly: omitted.map((entry) => entry.targetPath) };
+  const payload = { target: targetDir, changedFiles, scriptConflicts, omittedBootstrapOnly: omitted.map((entry) => entry.targetPath), releasedProjectOwned: [...releasedProjectOwned] };
   if (options.json === 'true') process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   else process.stdout.write(`[bootstrap-configure] changed=${changedFiles.length} scriptConflicts=${scriptConflicts.length}\n`);
 }

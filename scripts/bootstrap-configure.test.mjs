@@ -48,6 +48,45 @@ for (const owner of ['@acme/platform', '@hendrikeng']) test(`bootstrap configure
   assert.equal(typeof packageJson.scripts['verify:full'], 'string');
 });
 
+test('reviewed project ownership releases retired decisions without inventing a baseline', async (t) => {
+  const fixture = await fs.mkdtemp(path.join(os.tmpdir(), 'bootstrap-retired-decisions-'));
+  t.after(() => fs.rm(fixture, { recursive: true, force: true }));
+  const source = path.join(fixture, 'source');
+  const target = path.join(fixture, 'target');
+  for (const dir of ['scripts', 'distribution', 'template']) await fs.cp(path.join(rootDir, dir), path.join(source, dir), { recursive: true });
+  const ownershipPath = path.join(source, 'distribution/harness-ownership-manifest.json');
+  const ownership = JSON.parse(await fs.readFile(ownershipPath, 'utf8'));
+  ownership.projectOwnedGlobs = [];
+  ownership.bootstrapOnlyGlobs = [];
+  await fs.writeFile(ownershipPath, JSON.stringify(ownership));
+  const projectPath = 'docs/governance/architecture-rules.json';
+  await fs.writeFile(path.join(source, 'template', projectPath), JSON.stringify({ legacyTag: '{{RETIRED_TAG}}' }));
+  assert.equal(spawnSync(process.execPath, [path.join(source, 'scripts/harness-sync.mjs'), 'install', '--target', target]).status, 0);
+  const projectContent = JSON.stringify({ checks: [], reason: 'Project-owned configuration.' });
+  await fs.writeFile(path.join(target, projectPath), projectContent);
+  const packetPath = path.join(target, 'decisions.json');
+  await fs.writeFile(packetPath, JSON.stringify(await decisions()));
+  const manifestPath = path.join(target, 'docs/ops/automation/harness-manifest.json');
+  const original = await fs.readFile(manifestPath, 'utf8');
+  const args = [path.join(source, 'scripts/bootstrap-configure.mjs'), '--target', target, '--decisions', packetPath, '--baseline-only', 'true', '--json', 'true'];
+  const blocked = spawnSync(process.execPath, args, { encoding: 'utf8' });
+  assert.equal(blocked.status, 1);
+  assert.match(blocked.stderr, /RETIRED_TAG/);
+  assert.equal(await fs.readFile(manifestPath, 'utf8'), original);
+  const result = spawnSync(process.execPath, [...args, '--bootstrap-policy', path.join(rootDir, 'distribution/harness-ownership-manifest.json')], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(JSON.parse(result.stdout).releasedProjectOwned.includes(projectPath));
+  assert.equal(await fs.readFile(path.join(target, projectPath), 'utf8'), projectContent);
+  const next = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  const released = next.managedFiles.find((entry) => entry.targetPath === projectPath);
+  assert.equal(released.preservedLocal, true);
+  assert.equal(released.configuredSha256, undefined);
+  assert.equal(JSON.parse(result.stdout).releasedProjectOwned.includes('PLACEHOLDERS.md'), false);
+  assert.match(next.managedFiles.find((entry) => entry.targetPath === 'PLACEHOLDERS.md').configuredSha256, /^[a-f0-9]{64}$/);
+  assert.match(next.managedFiles.find((entry) => entry.targetPath === 'docs/agent-hardening/RUN_CONTROL.md').configuredSha256, /^[a-f0-9]{64}$/);
+  assert.equal(await fs.readFile(ownershipPath, 'utf8'), JSON.stringify(ownership));
+});
+
 test('bootstrap configure accepts matching source files without Git metadata', async () => {
   const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bootstrap-configure-no-git-'));
   const env = { ...process.env, PATH: path.dirname(process.execPath) };
