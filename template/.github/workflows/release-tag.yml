@@ -38,6 +38,13 @@ jobs:
           fi
 
           release_version="${release_branch#release/}"
+          IFS='.' read -r release_year release_month release_day release_sequence <<< "$release_version"
+          parsed_date="$(date -d "$release_year-$release_month-$release_day" +%Y.%m.%d 2>/dev/null || true)"
+          if [[ "$parsed_date" != "$release_year.$release_month.$release_day" || ! "$release_sequence" =~ ^[1-9][0-9]*$ ]]; then
+            echo "Release version must contain a real calendar date and positive sequence, got: $release_version" >&2
+            exit 1
+          fi
+
           expected_title="Release $release_version"
 
           if [[ "$release_title" != "$expected_title" ]]; then
@@ -61,26 +68,27 @@ jobs:
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
           MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
 
           tag="$RELEASE_TAG"
+          source_tag="source-$tag"
           version="$RELEASE_VERSION"
           merge_sha="$MERGE_SHA"
+          source_sha="$SOURCE_SHA"
 
-          parent_count="$(git rev-list --parents -n 1 "$merge_sha" | awk '{print NF - 1}')"
-          if [[ "$parent_count" -ne 2 ]]; then
-            echo "Release PR must be merged with a merge commit; $merge_sha has $parent_count parent(s)." >&2
-            exit 1
-          fi
-
-          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
-            echo "Tag already exists: $tag" >&2
-            exit 1
-          fi
+          for candidate in "$tag" "$source_tag"; do
+            if git ls-remote --exit-code --tags origin "refs/tags/$candidate" >/dev/null 2>&1; then
+              echo "Tag already exists: $candidate" >&2
+              exit 1
+            fi
+          done
+          git fetch --no-tags origin "$source_sha"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git tag -a "$tag" "$merge_sha" -m "Release $version"
-          git push origin "refs/tags/$tag"
+          git tag -a "$tag" "$merge_sha" -m "Release $version" -m "Source-Tag: $source_tag"
+          git tag -a "$source_tag" "$source_sha" -m "Release $version source boundary"
+          git push --atomic origin "refs/tags/$tag" "refs/tags/$source_tag"

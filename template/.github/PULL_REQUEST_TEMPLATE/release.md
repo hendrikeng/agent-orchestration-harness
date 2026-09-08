@@ -3,17 +3,19 @@
 - Release ID: `YYYY.MM.DD.N`
 - Release branch: `release/YYYY.MM.DD.N`
 - Release PR title: `Release YYYY.MM.DD.N`
-- Release tag: `vYYYY.MM.DD.N` created automatically after merge
+- Release tag: `vYYYY.MM.DD.N` at the landed revision
+- Source tag: `source-vYYYY.MM.DD.N` at the release head; both tags are created automatically after merge
 - Release class: standard / hotfix / platform
 - Source branch: `release/YYYY.MM.DD.N`
 - Target branch: `main`
-- Merge strategy confirmed: `Create a merge commit`, not squash
-- Preview or staging URL:
+- Merge strategy confirmed: merge commit, squash, or rebase
+- Project-specific deployment or test evidence, if applicable:
 - Included completed Plan-IDs:
 - Release notes generated: `npm run release:notes`
 - Release completeness verified: `npm run release:verify`
 - Release-branch fixes mirrored to `dev`: yes / none
-- Required release gates passed: Fast Gate / Full Gate / Release Candidate Gate / Browser Smoke / Release Preview
+- Required release gates passed: Fast Gate / Full Gate / Release Candidate Gate
+- Additional project-specific gates and results, if applicable:
 - Database migrations, backfills, or data repairs:
 - Environment or configuration changes:
 - Rollback or fix-forward plan:

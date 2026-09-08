@@ -12,6 +12,14 @@ const PLAN_COMMIT_MAPPING_REGEX = /^-\s+Commit:\s+`([a-f0-9]{12,40})`\s+\|\s+Pla
 
 export const root = process.cwd();
 
+export function isValidReleaseVersion(value) {
+  const match = String(value ?? "").match(/^(\d{4})\.(\d{2})\.(\d{2})\.([1-9]\d*)$/);
+  if (!match) return false;
+  const [, year, month, day] = match;
+  const date = new Date(`${year}-${month}-${day}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === `${year}-${month}-${day}`;
+}
+
 function git(args, { trim = true } = {}) {
   const output = execFileSync("git", args, {
     cwd: root,
@@ -115,11 +123,16 @@ function currentBranch() {
 
 function latestReleaseTag() {
   const output = gitMaybe(["tag", "--list", "v[0-9]*", "--sort=-version:refname"]);
-  return splitLines(output).find((tag) => RELEASE_TAG_REGEX.test(tag)) ?? "";
+  return splitLines(output).find((tag) => RELEASE_TAG_REGEX.test(tag) && isValidReleaseVersion(tag.slice(1))) ?? "";
 }
 
 function refExists(ref) {
   return Boolean(gitMaybe(["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]));
+}
+
+export function releaseSourceBoundary(base, hasRef = refExists) {
+  const sourceTag = RELEASE_TAG_REGEX.test(base) ? `source-${base}` : "";
+  return sourceTag && hasRef(sourceTag) ? sourceTag : base;
 }
 
 function parseArgs(argv) {
@@ -151,7 +164,7 @@ function parseArgs(argv) {
   }
 
   if (!options.base) {
-    options.base = latestReleaseTag();
+    options.base = latestReleaseTag() || (refExists("origin/main") ? "origin/main" : "");
   }
 
   return options;
@@ -245,20 +258,24 @@ export function analyzeReleaseRange(argv = process.argv.slice(2)) {
   const findings = [];
   const warnings = [];
   const branch = currentBranch();
-  const base = options.base;
+  const requestedBase = options.base;
+  const base = releaseSourceBoundary(requestedBase);
   const head = options.head || "HEAD";
 
-  if (!base) {
-    findings.push("No release base ref was provided and no vYYYY.MM.DD.N tag exists.");
+  if (!requestedBase) {
+    findings.push("No release base ref, release tag, or origin/main is available.");
+  } else if (!refExists(requestedBase)) {
+    findings.push(`Release base ref does not exist: ${requestedBase}`);
   } else if (!refExists(base)) {
-    findings.push(`Release base ref does not exist: ${base}`);
+    findings.push(`Release source boundary does not exist: ${base}`);
   }
 
   if (!head || !refExists(head)) {
     findings.push(`Release head ref does not exist: ${head}`);
   }
 
-  if (!options.allowAnyBranch && branch && !RELEASE_BRANCH_REGEX.test(branch)) {
+  if (!options.allowAnyBranch && branch &&
+      (!RELEASE_BRANCH_REGEX.test(branch) || !isValidReleaseVersion(branch.slice('release/'.length)))) {
     findings.push(
       `release:verify must run on release/YYYY.MM.DD.N branches; current branch is ${branch}. Use --allow-any-branch only for local dry runs.`,
     );
@@ -463,7 +480,8 @@ export function usage(commandName) {
     `Usage: npm run ${commandName} -- [--base <ref>] [--head <ref>] [--allow-any-branch]`,
     "",
     "Defaults:",
-    "- --base uses RELEASE_BASE_REF, then the latest vYYYY.MM.DD.N tag.",
+    "- --base uses RELEASE_BASE_REF, then the latest vYYYY.MM.DD.N tag, then origin/main for the first release.",
+    "- A release-tag base uses its companion source-vYYYY.MM.DD.N tag when available.",
     "- --head uses RELEASE_HEAD_REF, then HEAD.",
     "- release verification expects the current branch to match release/YYYY.MM.DD.N unless --allow-any-branch is set.",
   ].join("\n");

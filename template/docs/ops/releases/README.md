@@ -14,9 +14,42 @@ Define the release quality bar without binding the blueprint to one hosting prov
 - A release candidate is a reviewed, verifiable change set, not a place to discover basic correctness.
 - Release notes summarize included slices, user impact, migrations/backfills, environment changes, validation, and rollback or fix-forward expectations.
 - Release gates must run repository scripts instead of duplicating policy in hosting-provider configuration.
-- Branch, tag, preview, and deployment conventions are project-specific, but they must be documented here before agents treat them as mandatory.
+- The default long-lived branches are `dev` and `main`. Additional branches, hosted test environments, and deployment conventions are project-specific.
 - Release-only fixes must be mirrored back to the normal integration branch or explicitly tracked as follow-up debt.
 - Exceptional commit-to-plan mappings live in `docs/ops/releases/release-mapping.md`.
+
+## Default Branch and CI Flow
+
+```text
+slice/* or fix/* -> PR -> dev -> release/YYYY.MM.DD.N -> PR -> main
+```
+
+Implementation PRs target `dev`. Release PRs target `main`, with title `Release YYYY.MM.DD.N` and completed-plan evidence.
+Release fixes also return to `dev`.
+
+CI runs fast and full checks for PRs into `dev` and `main`, and for pushes to those branches.
+Slice and fix branch pushes run fast checks. Release PRs and the main merge queue also run release verification.
+These jobs run repository-defined checks. They do not deploy services or create hosted environments.
+Required status checks and branch protection need project-specific GitHub configuration.
+
+## Release and Source Tags
+
+A merged release PR creates two annotated tags in one atomic push:
+
+- `vYYYY.MM.DD.N`: the landed `main` revision.
+- `source-vYYYY.MM.DD.N`: the original release head.
+
+The workflow validates the date, positive release sequence, and PR title before it creates tags.
+It refuses existing tag names. Merge commits, squash, and rebase do not require different tag conventions.
+A tag records a revision, not deployment success.
+
+Release PR verification reads the exact PR head. Release notes and verification prefer the previous source tag when one exists.
+Older releases without a source tag retain their release-tag boundary.
+Before the first release tag, the default base is `origin/main`. An explicit `--base` can select another boundary.
+The merge queue verifies its proposed integration against `origin/main`.
+
+Staging, Preview, browser smoke checks, provider credentials, and deployment triggers are not mandatory blueprint features.
+Projects add applicable gates and evidence to their release contract. Multi-repository deployment coordination remains project-owned.
 
 ## Release Mapping File
 

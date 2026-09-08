@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { isValidReleaseVersion } from "./release-support-lib.mjs";
 
 const RELEASE_CONTRACT_MARKERS = [
   "## Release Contract",
   "- Release ID:",
   "- Release notes generated: `npm run release:notes`",
   "- Release completeness verified: `npm run release:verify`",
-  "- Required release gates passed: Fast Gate / Full Gate / Release Candidate Gate / Browser Smoke / Release Preview",
+  "- Required release gates passed: Fast Gate / Full Gate / Release Candidate Gate",
 ];
 
 const SLICE_CONTRACT_MARKERS = [
@@ -78,6 +79,9 @@ export function validatePrContract({ headRef, baseRef, title, body }) {
     }
 
     const releaseVersion = head.slice('release/'.length);
+    if (!isValidReleaseVersion(releaseVersion)) {
+      findings.push("release branch must use release/YYYY.MM.DD.N with a real date and positive sequence.");
+    }
     const expectedTitle = `Release ${releaseVersion}`;
     if (normalizedTitle !== expectedTitle) {
       findings.push(`release PR title must be '${expectedTitle}'; got '${normalizedTitle || '(empty)'}'.`);

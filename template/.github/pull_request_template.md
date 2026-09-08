@@ -11,7 +11,7 @@ Merge strategy:
 
 - `slice/* -> dev`: `Squash and merge`
 - `fix/* -> dev`: `Squash and merge`
-- `release/YYYY.MM.DD.N -> main`: `Create a merge commit`
+- `release/YYYY.MM.DD.N -> main`: merge commit, squash, or rebase; release and source tags preserve both revision boundaries
 
 If this selector appears after opening a PR, replace the full PR body with the
 matching branch-class template before marking the PR ready for review. `Fast
