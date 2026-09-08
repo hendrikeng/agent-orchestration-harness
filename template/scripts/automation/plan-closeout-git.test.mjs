@@ -133,6 +133,13 @@ test('Git closeout preserves inherited work across commits and validates both st
   pass();
   git('commit', '-m', 'truthful plan closure');
   pass();
+  const renamedPlan = 'docs/exec-plans/completed/renamed.md';
+  await fs.rename(path.join(root, completed), path.join(root, renamedPlan));
+  await write(evidence, '# Fixture evidence after plan rename\n');
+  git('add', completed, renamedPlan, evidence);
+  pass();
+  git('commit', '-m', 'rename completed plan with evidence');
+  pass();
   await write('docs/future/third.md', '# Third fixture\n');
   git('add', 'docs/future/third.md');
   git('commit', '-m', 'post-closure successor');

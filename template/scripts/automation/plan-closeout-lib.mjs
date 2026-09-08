@@ -201,7 +201,8 @@ export function changedFilesFromNameStatus(output) {
     if (!status) continue;
     const first = tokens[index++];
     const renamed = /^[RC]/.test(status);
-    if (first && !((status === 'D' || renamed) && isActivePlanPath(first))) changed.push(first);
+    if (first && !((status === 'D' || renamed) && isActivePlanPath(first)) &&
+        !(renamed && isCompletedPlanPath(first))) changed.push(first);
     if (renamed) {
       const destination = tokens[index++];
       if (destination) changed.push(destination);
